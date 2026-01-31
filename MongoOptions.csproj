@@ -8,6 +8,7 @@
     <PackageId>Tenowg.MongoOptions</PackageId>
     <Version>1.0.0</Version>
     <Authors>Craig Russell</Authors>
+	<PackageProjectUrl>https://github.com/tenowg/MongoOptions</PackageProjectUrl>
     <Description>A resilient, keyed configuration provider using MongoDB and IMemoryCache.</Description>
     <PackageTags>mongodb;dotnet10;options;configuration;csharp14</PackageTags>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
