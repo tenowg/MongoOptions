@@ -1,0 +1,34 @@
+# --- IDE Specifics ---
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.doccas
+
+# --- Build Outputs ---
+bin/
+obj/
+publish/
+
+# --- NuGet ---
+*.nupkg
+*.snupkg
+
+# --- MongoDB / Local Data ---
+*.log
+local-db-data/
+dump/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- User Secrets & Sensitive Config ---
+appsettings.Development.json
+appsettings.Local.json
+*.pfx
+*.publishsettings
+
+# --- Tooling ---
+.ionide/
+.cache/
