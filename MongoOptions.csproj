@@ -10,6 +10,8 @@
     <Authors>Craig Russell</Authors>
 	<PackageProjectUrl>https://github.com/tenowg/MongoOptions</PackageProjectUrl>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	<RepositoryUrl>https://github.com/tenowg/MongoOptions</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
     <Description>A resilient, keyed configuration provider using MongoDB and IMemoryCache.</Description>
     <PackageTags>mongodb;dotnet10;options;configuration;csharp14</PackageTags>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
