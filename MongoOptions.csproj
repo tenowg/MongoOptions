@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>Tenowg.MongoOptions</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Craig Russell</Authors>
 	<PackageProjectUrl>https://github.com/tenowg/MongoOptions</PackageProjectUrl>
 	<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
