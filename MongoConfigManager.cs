@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoOptions.Attributes;
+using MongoOptions.Data;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 

@@ -1,4 +1,4 @@
-﻿namespace MongoOptions
+﻿namespace MongoOptions.Data
 {
     /// <summary>
     /// Configuration options for the MongoDB-based options provider.

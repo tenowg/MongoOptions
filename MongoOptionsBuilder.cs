@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Xml.Linq;
 
 namespace MongoOptions
 {
@@ -24,6 +25,23 @@ namespace MongoOptions
         {
             services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
             services.AddOptions<T>();
+
+            var registryDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(MongoConfigRegistry));
+
+            MongoConfigRegistry registry;
+
+            if (registryDescriptor?.ImplementationInstance is MongoConfigRegistry existingRegistry)
+            {
+                registry = existingRegistry;
+            }
+            else
+            {
+                registry = new MongoConfigRegistry();
+                services.AddSingleton(registry);
+            }
+
+            registry.Register<T>();
+
             return this;
         }
     }

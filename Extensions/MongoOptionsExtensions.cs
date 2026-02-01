@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using MongoOptions.Data;
+using MongoOptions.Extensions;
 
-namespace MongoOptions
+namespace MongoOptions.Extensions
 {
     /// <summary>
     /// Provides extension methods for configuring MongoDB-based options in the dependency injection container.

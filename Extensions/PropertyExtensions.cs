@@ -7,38 +7,18 @@ using System.Text;
 
 namespace MongoOptions.Extensions
 {
+    /// <summary>
+    /// Provides extension methods for PropertyInfo to enhance property metadata handling.
+    /// </summary>
     public static class PropertyExtensions
     {
+        /// <summary>
+        /// Gets the display name for a property, using the DisplayAttribute if available, otherwise the property name.
+        /// </summary>
+        /// <param name="prop">The PropertyInfo to get the display name for.</param>
+        /// <returns>The display name of the property.</returns>
         extension(PropertyInfo prop)
         {
-            public Expression<Func<TProp>> CreateLambda<TProp>(object SettingsObject)
-            {
-                var constant = Expression.Constant(SettingsObject);
-                var property = Expression.Property(constant, prop.Name);
-
-                Expression finalExpression = property;
-                if (prop.PropertyType != typeof(TProp))
-                {
-                    finalExpression = Expression.Call(property, typeof(object).GetMethod("ToString")!);
-                }
-
-                return Expression.Lambda<Func<TProp>>(finalExpression);
-            }
-
-            public Expression<Func<object>> CreateLambda(object SettingsObject, Type type)
-            {
-                var constant = Expression.Constant(SettingsObject);
-                var property = Expression.Property(constant, prop.Name);
-
-                Expression finalExpression = property;
-                if (prop.PropertyType != type)
-                {
-                    finalExpression = Expression.Call(property, typeof(object).GetMethod("ToString")!);
-                }
-
-                return Expression.Lambda<Func<object>>(finalExpression);
-            }
-
             public string GetDisplayName() =>
                 prop.GetCustomAttribute<DisplayAttribute>()?.Name ?? prop.Name;
         }
