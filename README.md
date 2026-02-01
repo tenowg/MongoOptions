@@ -1,3 +1,7 @@
+```diff
++ Please visit my [MongoOptions.Blazor](https://github.com/tenowg/MongoOptions.Blazor) Github, it will be a usuable project to add Razor components to manage your Config files
+```
+
 # MongoOptions.Core 🍃
 
 A high-performance, resilient configuration provider for .NET 10 that uses MongoDB as a backing store with built-in memory caching and data validation.
