@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -20,7 +21,8 @@ namespace MongoOptions.Extensions
         /// <returns>The service collection for chaining.</returns>
         public static IServiceCollection AddMongoOptions<T>(this IServiceCollection services) where T : class, new()
         {
-            services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
+            new MongoOptionsBuilder(services).RegisterOptions<T>();
+            //services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
 
             return services;
         }
@@ -44,6 +46,23 @@ namespace MongoOptions.Extensions
             services.AddSingleton(options);
 
             return new MongoOptionsBuilder(services);
+        }
+
+        public static IApplicationBuilder RunMongoMonitor(this IApplicationBuilder app)
+        {
+            using var scope = app.ApplicationServices.CreateScope();
+            var myService = scope.ServiceProvider.GetRequiredService<MongoConfigRegistry>();
+
+            foreach (var item in myService.GetConfigs())
+            {
+                var type = typeof(IOptionsMonitorCache<>).MakeGenericType(item);
+                var monitoredService = scope.ServiceProvider.GetRequiredService(type);
+                var method = type
+                .GetMethod("TryRemove");
+                method?.Invoke(monitoredService, [Options.DefaultName]);
+            }
+
+            return app;
         }
     }
 }

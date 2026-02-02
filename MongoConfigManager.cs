@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -61,7 +62,7 @@ namespace MongoOptions
     /// Implementation of IConfigManager for managing configuration options in MongoDB.
     /// Handles validation, caching, and database operations.
     /// </summary>
-    public class MongoConfigManager(IMongoClient client, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
+    public class MongoConfigManager(IServiceProvider sp, IMongoClient client, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
     {
         /// <summary>
         /// Updates the default configuration for the specified type.
@@ -105,6 +106,14 @@ namespace MongoOptions
 
             string cacheKey = $"{configuration.CachePrefix}{typeof(T).Name}_{name}";
             cache.Remove(cacheKey);
+            IOptionsMonitorCache<T> optionsCache = sp.GetRequiredService<IOptionsMonitorCache<T>>();
+            MongoChangeTokenSource<T>? tokenSource = sp.GetRequiredService<IOptionsChangeTokenSource<T>>() as MongoChangeTokenSource<T>;
+            if (name  == "Default")
+            {
+                name = Options.DefaultName;
+            }
+            optionsCache.TryRemove(name);
+            tokenSource?.OnMongoChanged(name);
         }
 
         /// <summary>

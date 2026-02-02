@@ -55,17 +55,25 @@ namespace MongoOptions
         private readonly IMemoryCache _cache;
         private readonly IMongoCollection<ConfigDocument<T>> _collection;
         private readonly MongoConfigurationOptions _configuration;
-
+        private readonly IOptionsMonitorCache<T> optionsMonitor;
+        private readonly MemoryCacheEntryOptions cacheEntryOptions;
+        private readonly MongoChangeTokenSource<T> tokenSource;
         /// <summary>
         /// Initializes a new instance of the MongoDbKeyedConfigurator.
         /// </summary>
         /// <param name="cache">The memory cache for storing loaded configurations.</param>
         /// <param name="client">The MongoDB client.</param>
         /// <param name="options">The MongoDB configuration options.</param>
-        public MongoDbKeyedConfigurator(IMemoryCache cache, IMongoClient client, MongoConfigurationOptions options)
+        public MongoDbKeyedConfigurator(IMemoryCache cache, IMongoClient client, MongoConfigurationOptions options, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange)
         {
+            optionsMonitor = optionsCache;
+            tokenSource = (MongoChangeTokenSource<T>)optionsChange;
             _cache = cache;
             _configuration = options;
+            cacheEntryOptions = new MemoryCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = options.CacheHardDuration
+            }.RegisterPostEvictionCallback(CacheEvictionCallback, state: this);
 
             var optionsAttr = typeof(T).GetCustomAttribute<OptionsAttribute>();
 
@@ -108,7 +116,14 @@ namespace MongoOptions
                     {
                         cachedSettings = freshResult;
                         cachedSettings.ExpiresAt = DateTime.UtcNow.Add(_configuration.CacheSoftDuration);
-                        _cache.Set(cacheKey, cachedSettings, _configuration.CacheHardDuration);
+                        _cache.Set(cacheKey, cachedSettings, cacheEntryOptions);
+                        if (name == "Default" || string.IsNullOrEmpty(name))
+                        {
+                            tokenSource.OnMongoChanged(Options.DefaultName);
+                        } else
+                        {
+                            tokenSource.OnMongoChanged(name);
+                        }                    
                     }
                 }
                 catch
@@ -116,7 +131,7 @@ namespace MongoOptions
                     if (cachedSettings != null)
                     {
                         cachedSettings.ExpiresAt = DateTime.UtcNow.AddMinutes(1);
-                        _cache.Set(cacheKey, cachedSettings, _configuration.CacheHardDuration);
+                        _cache.Set(cacheKey, cachedSettings, cacheEntryOptions);
                     }
                     else
                     {
@@ -143,6 +158,16 @@ namespace MongoOptions
                     throw new OptionsValidationException(name ?? "Default", typeof(T), [errors]);
                 }
             }
+        }
+        private void CacheEvictionCallback(object key, object? value, EvictionReason reason, object? state)
+        {
+            var cachedValue = (ConfigDocument<T>?)value;
+            var cachedKey = cachedValue?.Name ?? "Default";
+            if (cachedKey == "Default")
+            {
+                cachedKey = Options.DefaultName;
+            }
+            optionsMonitor.TryRemove(cachedKey);
         }
     }
 }

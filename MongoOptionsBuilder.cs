@@ -24,6 +24,8 @@ namespace MongoOptions
         public MongoOptionsBuilder RegisterOptions<T>() where T : class, new()
         {
             services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
+            services.AddSingleton<IOptionsChangeTokenSource<T>, MongoChangeTokenSource<T>>();
+            
             services.AddOptions<T>();
 
             var registryDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(MongoConfigRegistry));

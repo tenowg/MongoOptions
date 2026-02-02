@@ -1,10 +1,10 @@
-```diff
-+ Please visit my [MongoOptions.Blazor](https://github.com/tenowg/MongoOptions.Blazor) Github, it will be a usuable project to add Razor components to manage your Config files
-```
+
+Please visit my [MongoOptions.Blazor](https://github.com/tenowg/MongoOptions.Blazor) Github, it will be a usuable project to add Razor components to manage your Config files
 
 # MongoOptions.Core 🍃
 
 A high-performance, resilient configuration provider for .NET 10 that uses MongoDB as a backing store with built-in memory caching and data validation.
+Update your config files without reloading you project.
 
 ## 🚀 Features
 
@@ -52,6 +52,15 @@ builder.Services.AddMongoConfiguration(config =>
 })
 .RegisterOptions<FeatureSettings>();
 ```
+
+If you plan on using IOptionsMontor there is one more thing you need to add to your app.
+
+```csharp
+app.RunMongoMonitor();
+```
+
+It doesn't matter were you put it, but it needs to be there to clear the initial cache or monitor will not work.
+You don't need this if you are only going to use IOptionsSnapshot.
 
 ### 3. Usage
 
