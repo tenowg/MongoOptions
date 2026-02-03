@@ -24,7 +24,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: tenowg/Tenowg.MongoOptions.Generator
-        path: generator
+        path: MongoOptions.Generator
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Restore dependencies
       run: dotnet restore
