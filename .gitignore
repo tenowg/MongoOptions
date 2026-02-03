@@ -4,6 +4,7 @@
 *.user
 *.userosscache
 *.sln.doccas
+**/Generated/**
 
 # --- Build Outputs ---
 bin/

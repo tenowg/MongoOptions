@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
+	<NoWarn>$(NoWarn);NU5128</NoWarn>
     <PackageId>Tenowg.MongoOptions</PackageId>
     <Authors>Craig Russell</Authors>
 	<PackageProjectUrl>https://github.com/tenowg/MongoOptions</PackageProjectUrl>
@@ -20,34 +20,40 @@
 	<GeneratePackageOnBuild Condition="'$(Configuration)'=='LocalRelease'">true</GeneratePackageOnBuild>
 
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Debug'">false</GeneratePackageOnBuild>
+	  
 	<PackageOutputPath>I:\LocalNuget\</PackageOutputPath>
+	
+	<MinVerDefaultPreReleaseIdentifiers  Condition="'$(Configuration)' == 'LocalRelease'">local</MinVerDefaultPreReleaseIdentifiers>
 	<Configurations>Debug;Release;LocalRelease</Configurations>
   </PropertyGroup>
-	<PropertyGroup>
-		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-	</PropertyGroup>
-	<ItemGroup>
-	  <None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
-	</ItemGroup>
-
-    <ItemGroup>
-	    <None Include="README.md" Pack="true" PackagePath="\" />
-		<None Include="LICENSE.txt" Pack="true" PackagePath="\" />
-    </ItemGroup>
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
+  <PropertyGroup>
+	<PublishRepositoryUrl>true</PublishRepositoryUrl>
+	<EmbedUntrackedSources>true</EmbedUntrackedSources>
+	<IncludeSymbols>true</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+	<None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+	<None Include="README.md" Pack="true" PackagePath="\" />
+	<None Include="LICENSE.txt" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  <ItemGroup>
+	<FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
   <ItemGroup>
 	<PackageReference Include="MinVer" Version="7.0.0">
 		<PrivateAssets>all</PrivateAssets>
 		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	</PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+
     <PackageReference Include="MongoDB.Driver" Version="3.6.0" />
   </ItemGroup>
-
+  <ItemGroup>
+	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll"
+			  Pack="true"
+			  PackagePath="analyzers/dotnet/cs"
+			  Visible="false" />
+  </ItemGroup>
 </Project>

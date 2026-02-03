@@ -167,7 +167,7 @@ namespace MongoOptions
         /// <returns>The MongoDB collection for the type.</returns>
         private IMongoCollection<ConfigDocument<T>> GetCollection<T>()
         {
-            var optionsAttr = typeof(T).GetCustomAttribute<OptionsAttribute>();
+            var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionsAttribute>();
 
             var collectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
             var databaseName = optionsAttr?.DatabaseName ?? configuration.DatabaseName;

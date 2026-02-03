@@ -75,7 +75,7 @@ namespace MongoOptions
                 AbsoluteExpirationRelativeToNow = options.CacheHardDuration
             }.RegisterPostEvictionCallback(CacheEvictionCallback, state: this);
 
-            var optionsAttr = typeof(T).GetCustomAttribute<OptionsAttribute>();
+            var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionsAttribute>();
 
             var collection = optionsAttr?.CollectionName ?? typeof(T).Name;
             var database = optionsAttr?.DatabaseName ?? options.DatabaseName;
