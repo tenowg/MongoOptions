@@ -23,7 +23,7 @@ jobs:
     - name: Checkout Source Generator
       uses: actions/checkout@v4
       with:
-        repository: YourUsername/GeneratorRepoName
+        repository: tenowg/Tenowg.MongoOptions.Generator
         path: generator
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Restore dependencies
