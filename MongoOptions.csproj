@@ -23,7 +23,7 @@
 	  
 	<PackageOutputPath>I:\LocalNuget\</PackageOutputPath>
 	
-	<MinVerDefaultPreReleaseIdentifiers  Condition="'$(Configuration)' == 'LocalRelease'">local</MinVerDefaultPreReleaseIdentifiers>
+	<MinVerDefaultPreReleaseIdentifiers Condition="'$(Configuration)' == 'LocalRelease'">local</MinVerDefaultPreReleaseIdentifiers>
 	<Configurations>Debug;Release;LocalRelease</Configurations>
   </PropertyGroup>
   <PropertyGroup>
@@ -51,9 +51,6 @@
     <PackageReference Include="MongoDB.Driver" Version="3.6.0" />
   </ItemGroup>
   <ItemGroup>
-	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll"
-			  Pack="true"
-			  PackagePath="analyzers/dotnet/cs"
-			  Visible="false" />
+	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using MongoOptions.Attributes;
+using MongoOptions.Data;
+using System.Reflection;
 
 namespace MongoOptions.Extensions
 {
@@ -110,6 +112,18 @@ namespace MongoOptions.Extensions
 
                 // 4. Fallback to standard Name
                 return type.Name;
+            }
+
+            public string GetDatabaseName(MongoConfigurationOptions options)
+            {
+                var optionsAttr = type.GetCustomAttribute<MongoOptionAttribute>();
+
+                if (optionsAttr != null)
+                {
+                    return optionsAttr?.DatabaseName ?? options.DatabaseName;
+                }
+
+                return string.Empty;
             }
         }
     }

@@ -3,10 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using MongoOptions.Attributes;
 using MongoOptions.Data;
+using MongoOptions.Interfaces;
 using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 
 namespace MongoOptions
 {
@@ -38,7 +37,7 @@ namespace MongoOptions
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>A list of configuration keys.</returns>
-        Task<List<string>> GetKeys<T>();
+        Task<List<string>> GetKeys<T>() where T : class, new();
 
         /// <summary>
         /// Removes a named configuration for the specified type.
@@ -46,7 +45,7 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="name">The name of the configuration to remove.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task RemoveConfig<T>(string name);
+        Task RemoveConfig<T>(string name) where T : class, new();
 
         /// <summary>
         /// Clones a configuration from one name to another.
@@ -86,7 +85,8 @@ namespace MongoOptions
         /// <exception cref="OptionsValidationException">Thrown if the value fails validation.</exception>
         public async Task UpdateConfigAsync<T>(string name, T value) where T : class, new()
         {
-            var collection = GetCollection<T>();
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            var collection = connection.Collection; // GetCollection<T>();
 
             var context = new ValidationContext(value);
             var results = new List<ValidationResult>();
@@ -94,7 +94,7 @@ namespace MongoOptions
             if (!Validator.TryValidateObject(value, context, results, true))
             {
                 var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
-                throw new OptionsValidationException(name ?? "Default", typeof(T), [errors]);
+                throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
             }
 
             var document = new ConfigDocument<T> { Name = name, Value = value };
@@ -108,7 +108,7 @@ namespace MongoOptions
             cache.Remove(cacheKey);
             IOptionsMonitorCache<T> optionsCache = sp.GetRequiredService<IOptionsMonitorCache<T>>();
             MongoChangeTokenSource<T>? tokenSource = sp.GetRequiredService<IOptionsChangeTokenSource<T>>() as MongoChangeTokenSource<T>;
-            if (name  == "Default")
+            if (name  == MongoDefaultOptions.DefaultName)
             {
                 name = Options.DefaultName;
             }
@@ -121,11 +121,12 @@ namespace MongoOptions
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>A list of configuration keys.</returns>
-        public async Task<List<string>> GetKeys<T>()
+        public async Task<List<string>> GetKeys<T>() where T : class, new()
         {
-            var collection = GetCollection<T>();
+            var connection = sp.GetService<IMongoConnection<T>>();
+            if (connection == null) { return []; }
 
-            return await collection.AsQueryable().Select(o => o.Name).ToListAsync();
+            return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
         }
 
         /// <summary>
@@ -134,11 +135,12 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="name">The name of the configuration to remove.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task RemoveConfig<T>(string name)
+        public async Task RemoveConfig<T>(string name) where T : class, new()
         {
-            var collection = GetCollection<T>();
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            //var collection = GetCollection<T>();
 
-            await collection.DeleteOneAsync(o => o.Name == name);
+            await connection.Collection.DeleteOneAsync(o => o.Name == name);
         }
 
         /// <summary>
@@ -150,9 +152,10 @@ namespace MongoOptions
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task CloneConfigAsync<T>(string sourceName, string targetName) where T : class, new()
         {
-            var collection = GetCollection<T>();
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            //var collection = GetCollection<T>();
 
-            var source = await collection.Find(d => d.Name == sourceName).FirstOrDefaultAsync();
+            var source = await connection.Collection.Find(d => d.Name == sourceName).FirstOrDefaultAsync();
 
             if (source != null)
             {
@@ -165,15 +168,15 @@ namespace MongoOptions
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>The MongoDB collection for the type.</returns>
-        private IMongoCollection<ConfigDocument<T>> GetCollection<T>()
-        {
-            var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionsAttribute>();
+        //private IMongoCollection<ConfigDocument<T>> GetCollection<T>()
+        //{
+        //    var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionAttribute>();
 
-            var collectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
-            var databaseName = optionsAttr?.DatabaseName ?? configuration.DatabaseName;
+        //    var collectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
+        //    var databaseName = optionsAttr?.DatabaseName ?? configuration.DatabaseName;
 
-            var database = client.GetDatabase(databaseName);
-            return database.GetCollection<ConfigDocument<T>>(collectionName);
-        }
+        //    var database = client.GetDatabase(databaseName);
+        //    return database.GetCollection<ConfigDocument<T>>(collectionName);
+        //}
     }
 }

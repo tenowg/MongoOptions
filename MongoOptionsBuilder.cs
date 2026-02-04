@@ -1,6 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Xml.Linq;
+using MongoDB.Driver;
+using MongoOptions.Data;
+using MongoOptions.Extensions;
+using MongoOptions.Interfaces;
+using MongoOptions.Services;
 
 namespace MongoOptions
 {
@@ -8,12 +12,13 @@ namespace MongoOptions
     /// A builder class for configuring multiple options types with MongoDB backing.
     /// Allows fluent registration of additional options after initial setup.
     /// </summary>
-    public class MongoOptionsBuilder(IServiceCollection services)
+    public partial class MongoOptionsBuilder(IServiceCollection services)
     {
         /// <summary>
         /// Gets the underlying service collection for direct manipulation if needed.
         /// </summary>
         public IServiceCollection Services => services;
+        private MongoConfigurationOptions? options = services.FindOrAddRegisteredService<MongoConfigurationOptions>();
 
         /// <summary>
         /// Registers the specified options type for MongoDB-based configuration.
@@ -25,25 +30,33 @@ namespace MongoOptions
         {
             services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
             services.AddSingleton<IOptionsChangeTokenSource<T>, MongoChangeTokenSource<T>>();
-            
+            services.AddSingleton<IMongoConnection<T>, MongoConnection<T>>();
+            services.AddSingleton<IMongoConnection, MongoConnection<T>>();
+
             services.AddOptions<T>();
 
-            var registryDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(MongoConfigRegistry));
+            var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
 
-            MongoConfigRegistry registry;
+            registry?.Register<T>();
 
-            if (registryDescriptor?.ImplementationInstance is MongoConfigRegistry existingRegistry)
+            return this;
+        }
+
+        /// <summary>
+        /// Adds Type to the Mongo ChangeStream, this is a default bahviour, additional Watch versions will be added
+        /// as addtional packages. Requires mongo to be replica set, even single instance works
+        /// </summary>
+        /// <returns>The MongoOptionsBuilder for chaining.</returns>
+        public MongoOptionsBuilder AddMongoWatch()
+        {
+            var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
+            var databaseName = registry?.GetConfigs().Select(o => o.GetDatabaseName(options!)).Distinct().ToList() ?? [];
+
+            foreach(var group in databaseName)
             {
-                registry = existingRegistry;
+                services.AddKeyedSingleton(group, (sp, key) => new MongoOptionsWatcher(sp, group));
+                services.AddHostedService(sp => sp.GetRequiredKeyedService<MongoOptionsWatcher>(group));
             }
-            else
-            {
-                registry = new MongoConfigRegistry();
-                services.AddSingleton(registry);
-            }
-
-            registry.Register<T>();
-
             return this;
         }
     }

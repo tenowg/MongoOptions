@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoOptions.Attributes;
 using MongoOptions.Data;
+using MongoOptions.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
@@ -14,7 +15,7 @@ namespace MongoOptions
     /// Represents a configuration document stored in MongoDB.
     /// </summary>
     /// <typeparam name="T">The type of the configuration value.</typeparam>
-    internal class ConfigDocument<T>
+    public class ConfigDocument<T>
     {
         /// <summary>
         /// The MongoDB ObjectId for the document.
@@ -44,44 +45,24 @@ namespace MongoOptions
         /// </summary>
         public bool IsExpired => DateTime.UtcNow > ExpiresAt;
     }
-    
+
     /// <summary>
     /// Configures named options by loading them from MongoDB with caching and validation.
     /// Implements IConfigureNamedOptions to integrate with the .NET options pattern.
     /// </summary>
     /// <typeparam name="T">The type of options to configure.</typeparam>
-    public class MongoDbKeyedConfigurator<T> : IConfigureNamedOptions<T> where T : class, new()
+    /// <remarks>
+    /// Initializes a new instance of the MongoDbKeyedConfigurator.
+    /// </remarks>
+    /// <param name="cache">The memory cache for storing loaded configurations.</param>
+    /// <param name="collection">The MongoDB client.</param>
+    /// <param name="options">The MongoDB configuration options.</param>
+    public class MongoDbKeyedConfigurator<T>(IMemoryCache cache, IMongoConnection<T> mongoConnection) : IConfigureNamedOptions<T> where T : class, new()
     {
-        private readonly IMemoryCache _cache;
-        private readonly IMongoCollection<ConfigDocument<T>> _collection;
-        private readonly MongoConfigurationOptions _configuration;
-        private readonly IOptionsMonitorCache<T> optionsMonitor;
-        private readonly MemoryCacheEntryOptions cacheEntryOptions;
-        private readonly MongoChangeTokenSource<T> tokenSource;
-        /// <summary>
-        /// Initializes a new instance of the MongoDbKeyedConfigurator.
-        /// </summary>
-        /// <param name="cache">The memory cache for storing loaded configurations.</param>
-        /// <param name="client">The MongoDB client.</param>
-        /// <param name="options">The MongoDB configuration options.</param>
-        public MongoDbKeyedConfigurator(IMemoryCache cache, IMongoClient client, MongoConfigurationOptions options, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange)
-        {
-            optionsMonitor = optionsCache;
-            tokenSource = (MongoChangeTokenSource<T>)optionsChange;
-            _cache = cache;
-            _configuration = options;
-            cacheEntryOptions = new MemoryCacheEntryOptions()
-            {
-                AbsoluteExpirationRelativeToNow = options.CacheHardDuration
-            }.RegisterPostEvictionCallback(CacheEvictionCallback, state: this);
-
-            var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionsAttribute>();
-
-            var collection = optionsAttr?.CollectionName ?? typeof(T).Name;
-            var database = optionsAttr?.DatabaseName ?? options.DatabaseName;
-
-            _collection = client.GetDatabase(database).GetCollection<ConfigDocument<T>>(collection);
-        }
+        private readonly IMemoryCache _cache = cache;
+        private readonly IMongoCollection<ConfigDocument<T>> _collection = mongoConnection.Collection!;
+        private readonly MongoConfigurationOptions _configuration = mongoConnection.MongoConfigs;
+        private readonly IOptionsMonitorCache<T> optionsMonitor = mongoConnection.OptionsCache;
 
         /// <summary>
         /// Configures the default options instance.
@@ -100,29 +81,29 @@ namespace MongoOptions
         public void Configure(string? name, T options)
         {
             string lookupName = string.IsNullOrWhiteSpace(name) || name == Options.DefaultName
-                        ? "Default"
+                        ? MongoDefaultOptions.DefaultName
                         : name;
 
-            string cacheKey = $"{_configuration.CachePrefix}{typeof(T).Name}_{lookupName}";
+            string cacheKey = $"{mongoConnection.MongoConfigs.CachePrefix}{typeof(T).Name}_{lookupName}";
 
             if (!_cache.TryGetValue(cacheKey, out ConfigDocument<T>? cachedSettings) || cachedSettings!.IsExpired)
             {
                 try
                 {
-                    var filter = Builders<ConfigDocument<T>>.Filter.Eq("Name", lookupName);
+                    var filter = Builders<ConfigDocument<T>>.Filter.Eq(o => o.Name, lookupName);
                     var freshResult = _collection.Find(filter).FirstOrDefault();
 
                     if (freshResult != null)
                     {
                         cachedSettings = freshResult;
                         cachedSettings.ExpiresAt = DateTime.UtcNow.Add(_configuration.CacheSoftDuration);
-                        _cache.Set(cacheKey, cachedSettings, cacheEntryOptions);
-                        if (name == "Default" || string.IsNullOrEmpty(name))
+                        _cache.Set(cacheKey, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));
+                        if (name == MongoDefaultOptions.DefaultName || string.IsNullOrEmpty(name))
                         {
-                            tokenSource.OnMongoChanged(Options.DefaultName);
+                            mongoConnection.OnChanged(Options.DefaultName);
                         } else
                         {
-                            tokenSource.OnMongoChanged(name);
+                            mongoConnection.OnChanged(name);
                         }                    
                     }
                 }
@@ -131,7 +112,7 @@ namespace MongoOptions
                     if (cachedSettings != null)
                     {
                         cachedSettings.ExpiresAt = DateTime.UtcNow.AddMinutes(1);
-                        _cache.Set(cacheKey, cachedSettings, cacheEntryOptions);
+                        _cache.Set(cacheKey, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));
                     }
                     else
                     {
@@ -155,15 +136,15 @@ namespace MongoOptions
                 {
                     var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
                     // You can log this or throw an exception to prevent bad data from leaking in
-                    throw new OptionsValidationException(name ?? "Default", typeof(T), [errors]);
+                    throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
                 }
             }
         }
         private void CacheEvictionCallback(object key, object? value, EvictionReason reason, object? state)
         {
             var cachedValue = (ConfigDocument<T>?)value;
-            var cachedKey = cachedValue?.Name ?? "Default";
-            if (cachedKey == "Default")
+            var cachedKey = cachedValue?.Name ?? MongoDefaultOptions.DefaultName;
+            if (cachedKey == MongoDefaultOptions.DefaultName)
             {
                 cachedKey = Options.DefaultName;
             }

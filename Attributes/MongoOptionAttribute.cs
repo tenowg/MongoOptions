@@ -5,7 +5,7 @@ namespace MongoOptions.Attributes
     /// Applied to classes that represent configuration options to override default naming.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class MongoOptionsAttribute() : Attribute
+    public class MongoOptionAttribute() : Attribute
     {
         /// <summary>
         /// Gets or sets the name of the MongoDB collection to store the configuration.
