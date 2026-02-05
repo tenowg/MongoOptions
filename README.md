@@ -36,9 +36,15 @@ public partial class FeatureSettings
     [Range(1, 100)]
     public int MaxRetries { get; set; } = 5;
 }
+
+// this is currently optional, but if you want to use DataAnnotations for validation, it is required
+// Source generation will fill in the rest of this class, you don't need to add anything else
+[OptionsValidator]
+public partial FeatureSettingsValidator : IValidateOption<FeatureSettings>
+{}
 ```
 
-MongoOption Attribute is requires for Source Generation, you don't need to assign a custom Database name or CollectionName.
+MongoOption Attribute is required for Source Generation, you don't need to assign a custom Database name or CollectionName.
 
 Source Generation has been added [MongoOptions.Generator](https://github.com/tenowg/MongoOptions.Generator). It is keyed to the attribute [MongoOptions]
 So if you want to make your life even easier, just tag you POCOs with [MongoOption] and add .RegisterDiscoveredOptions()
@@ -57,7 +63,12 @@ builder.Services.AddMongoConfiguration(config =>
 .RegisterOptions<FeatureSettings>();
 OR
 .RegisterDiscoveredOptions();
+.AddMongoWatch();
 ```
+
+AddMongoWatch(): Uses Change Stream from MongoDB to update configs on Database change, your database needs to be a replica set.
+This will be option, as there is also an internal mechanism to handle changes. This is mostly useful for Multi server syncing.
+This will be extendable, so look for Redis versions in the near future.
 
 If you plan on using IOptionsMontor there is one more thing you need to add to your app.
 
