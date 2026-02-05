@@ -12,6 +12,5 @@ namespace MongoOptions
         Action<object, object?> Setter,
         Func<object, object> ExpressionFactory,
         Func<object, IDispatcher, PropertyMetadata, object> Dispatcher
-        //Func<object, IDispatcher<object>, PropertyMetadata, object, object?> DispatcherWithState
     );
 }
