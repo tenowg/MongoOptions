@@ -6,6 +6,8 @@ using MongoDB.Driver.Linq;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MongoOptions
 {
@@ -21,7 +23,7 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<T>(T value) where T : class, new();
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value) where T : class, IConfigFile;
 
         /// <summary>
         /// Updates a named configuration for the specified type.
@@ -30,14 +32,16 @@ namespace MongoOptions
         /// <param name="name">The name of the configuration instance.</param>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<T>(string name, T value) where T : class, new();
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value) where T : class, IConfigFile;
 
         /// <summary>
         /// Retrieves all configuration keys for the specified type.
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>A list of configuration keys.</returns>
-        Task<List<string>> GetKeys<T>() where T : class, new();
+        Task<List<string>> GetKeys<T>() where T : class, IConfigFile;
+
+        Task<List<string>> GetKeys(Type type);
 
         /// <summary>
         /// Removes a named configuration for the specified type.
@@ -45,7 +49,7 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="name">The name of the configuration to remove.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task RemoveConfig<T>(string name) where T : class, new();
+        Task RemoveConfig<T>(string name) where T : class, IConfigFile;
 
         /// <summary>
         /// Clones a configuration from one name to another.
@@ -54,14 +58,14 @@ namespace MongoOptions
         /// <param name="sourceName">The name of the source configuration.</param>
         /// <param name="targetName">The name of the target configuration.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task CloneConfigAsync<T>(string sourceName, string targetName) where T : class, new();
+        Task CloneConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string sourceName, string targetName) where T : class, IConfigFile;
     }
 
     /// <summary>
     /// Implementation of IConfigManager for managing configuration options in MongoDB.
     /// Handles validation, caching, and database operations.
     /// </summary>
-    public class MongoConfigManager(IServiceProvider sp, IMongoClient client, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
+    public class MongoConfigManager(IServiceProvider sp, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
     {
         /// <summary>
         /// Updates the default configuration for the specified type.
@@ -69,7 +73,7 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task UpdateConfigAsync<T>(T value) where T : class, new()
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value) where T : class, IConfigFile
         {
             await UpdateConfigAsync("Default", value);
         }
@@ -83,19 +87,29 @@ namespace MongoOptions
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="OptionsValidationException">Thrown if the value fails validation.</exception>
-        public async Task UpdateConfigAsync<T>(string name, T value) where T : class, new()
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
-            var collection = connection.Collection; // GetCollection<T>();
+            var validator = sp.GetService<IValidateOptions<T>>();
+            var collection = connection.Collection;
 
-            var context = new ValidationContext(value);
-            var results = new List<ValidationResult>();
+            //var context = new ValidationContext(value);
+            //var results = new List<ValidationResult>();
 
-            if (!Validator.TryValidateObject(value, context, results, true))
+            if (validator != null)
             {
-                var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
-                throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
+                var result = validator.Validate(nameof(T), value);
+
+                if (result != null)
+                {
+                    throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), result.Failures);
+                }
             }
+            //if (!Validator.TryValidateObject(value, context, results, true))
+            //{
+            //    var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
+            //    throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
+            //}
 
             var document = new ConfigDocument<T> { Name = name, Value = value };
             await collection.ReplaceOneAsync(
@@ -113,7 +127,7 @@ namespace MongoOptions
                 name = Options.DefaultName;
             }
             optionsCache.TryRemove(name);
-            tokenSource?.OnMongoChanged(name);
+            //tokenSource?.OnMongoChanged(name);
         }
 
         /// <summary>
@@ -121,12 +135,21 @@ namespace MongoOptions
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>A list of configuration keys.</returns>
-        public async Task<List<string>> GetKeys<T>() where T : class, new()
+        public async Task<List<string>> GetKeys<T>() where T : class, IConfigFile
         {
             var connection = sp.GetService<IMongoConnection<T>>();
             if (connection == null) { return []; }
 
             return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
+        }
+
+        public async Task<List<string>> GetKeys(Type type)
+        {
+            //var connection = sp.GetService<IMongoConnection<T>>();
+            //if (connection == null) { return []; }
+
+            //return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
+            return [];
         }
 
         /// <summary>
@@ -135,7 +158,7 @@ namespace MongoOptions
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="name">The name of the configuration to remove.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task RemoveConfig<T>(string name) where T : class, new()
+        public async Task RemoveConfig<T>(string name) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
             //var collection = GetCollection<T>();
@@ -150,7 +173,7 @@ namespace MongoOptions
         /// <param name="sourceName">The name of the source configuration.</param>
         /// <param name="targetName">The name of the target configuration.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task CloneConfigAsync<T>(string sourceName, string targetName) where T : class, new()
+        public async Task CloneConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string sourceName, string targetName) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
             //var collection = GetCollection<T>();

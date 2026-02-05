@@ -22,7 +22,6 @@
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Debug'">false</GeneratePackageOnBuild>
 	  
 	<PackageOutputPath>I:\LocalNuget\</PackageOutputPath>
-	
 	<MinVerDefaultPreReleaseIdentifiers Condition="'$(Configuration)' == 'LocalRelease'">local</MinVerDefaultPreReleaseIdentifiers>
 	<Configurations>Debug;Release;LocalRelease</Configurations>
   </PropertyGroup>
@@ -53,4 +52,19 @@
   <ItemGroup>
 	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\MongoOptions.Generator\MongoOptions.Generator.csproj"
+						  OutputItemType="Analyzer"
+						  ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+<PropertyGroup>
+  <PublishAot>false</PublishAot>
+  <IsAotCompatible>false</IsAotCompatible>
+</PropertyGroup>
+
+	<PropertyGroup>
+		<EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+	</PropertyGroup>
+
 </Project>

@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
-using MongoOptions.Data;
+using MongoOptions.Interfaces;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace MongoOptions
 {
@@ -8,27 +9,44 @@ namespace MongoOptions
     /// Registry for tracking registered configuration types.
     /// Provides methods to register and retrieve configuration types used in the MongoDB options system.
     /// </summary>
-    public class MongoConfigRegistry
+    public class MongoConfigRegistry(IEnumerable<IMongoConnection> connections)
     {
         // Key: The name/ID of the config, Value: The Type and a friendly name
-        private readonly HashSet<Type> _registeredConfigs = new();
-        private readonly ConcurrentDictionary<string, IMongoDatabase> _databases = new();
+        //private readonly HashSet<Type> _registeredConfigs = new();
+        //private readonly ConcurrentDictionary<string, IConfigFile> _configs = new();
+        private readonly Dictionary<string, IMongoConnection> _connections = connections.ToDictionary(o => o.Type.Name, o => o);
 
         /// <summary>
         /// Registers a configuration type for use with MongoDB options.
         /// </summary>
         /// <typeparam name="TConfig">The type of the configuration options to register.</typeparam>
-        public void Register<TConfig>() where TConfig : class
-        {
-            
-            _registeredConfigs.Add(typeof(TConfig));
-        }
+        //public void Register<TConfig>(TConfig instance) where TConfig : class, IConfigFile
+        //{
+
+        //    _registeredConfigs.Add(typeof(TConfig));
+        //    _configs.TryAdd(nameof(TConfig), instance);
+        //}
 
         /// <summary>
         /// Gets all registered configuration types.
         /// </summary>
         /// <returns>An enumerable collection of registered configuration types.</returns>
         public IEnumerable<Type> GetConfigs()
-            => _registeredConfigs;
+            => _connections.Select(o => o.Value.Type);
+
+        public T GetInstance<T>() where T : IConfigFile
+        {
+            return (T)_connections.Where(o => o.Key == nameof(T)).Select(o => o.Value.Instance).FirstOrDefault();
+        }
+
+        public IConfigFile GetInstance(Type type)
+        {
+            return _connections.Where(o => o.Value.Type == type).Select(o => o.Value.Instance).FirstOrDefault();
+        }
+
+        public IConfigFile GetInstance(string type)
+        {
+            return _connections.Where(o => o.Key == type).Select(o => o.Value.Instance).FirstOrDefault();
+        }
     }
 }

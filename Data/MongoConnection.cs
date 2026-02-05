@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoOptions.Attributes;
 using MongoOptions.Interfaces;
@@ -8,7 +10,7 @@ using System.Reflection;
 
 namespace MongoOptions.Data
 {
-    public partial class MongoConnection<T> : IMongoConnection, IMongoConnection<T> where T : class, new()
+    public partial class MongoConnection<T> : IMongoConnection, IMongoConnection<T> where T : class, IConfigFile, new()
     {
         public string Database { get; set; }
         public string CollectionName { get; set; }
@@ -18,14 +20,18 @@ namespace MongoOptions.Data
         public MemoryCacheEntryOptions memoryOptions { get; set; }
         public MongoConfigurationOptions MongoConfigs { get; set; }
         public Type Type { get; set; } = typeof(T);
+        public IConfigFile Instance { get; set; }
 
-        public MongoConnection(IServiceProvider sp, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, MongoConfigurationOptions options)
+        private IServiceProvider sp { get; set; }
+
+        public MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, MongoConfigurationOptions options)
         {
             OptionsCache = optionsCache;
             OptionsChange = optionsChange;
             MongoConfigs = options;
+            Instance = new T();
+            this.sp = sp;
 
-            var client = sp.GetRequiredService<IMongoClient>();
             var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionAttribute>();
             CollectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
             Database = optionsAttr?.DatabaseName ?? options.DatabaseName;
@@ -38,15 +44,27 @@ namespace MongoOptions.Data
             };
         }
 
+        public IOptionsMonitor<T>? GetMonitor()
+        {
+            return sp.GetService<IOptionsMonitor<T>>();
+        }
+
         public void OnChanged(string? name = null)
         {
-            if (name == null || name == Options.DefaultName)
+            if (name == null || name == MongoDefaultOptions.DefaultName)
             {
-                name = MongoDefaultOptions.DefaultName;
+                name = Options.DefaultName;
             }
 
             ((MongoChangeTokenSource<T>)OptionsChange).OnMongoChanged(name);
             OptionsCache.TryRemove(name);
+        }
+
+        public void OnChanged(BsonDocument fullDocument)
+        {
+            var updatedConfig = BsonSerializer.Deserialize<ConfigDocument<T>>(fullDocument);
+
+            OnChanged(updatedConfig.Name);
         }
     }
 }

@@ -26,7 +26,7 @@ namespace MongoOptions
         /// </summary>
         /// <typeparam name="T">The type of options to register.</typeparam>
         /// <returns>The MongoOptionsBuilder for chaining.</returns>
-        public MongoOptionsBuilder RegisterOptions<T>() where T : class, new()
+        public MongoOptionsBuilder RegisterOptions<T>() where T : class, IConfigFile, new()
         {
             services.AddSingleton<IConfigureOptions<T>, MongoDbKeyedConfigurator<T>>();
             services.AddSingleton<IOptionsChangeTokenSource<T>, MongoChangeTokenSource<T>>();
@@ -35,9 +35,9 @@ namespace MongoOptions
 
             services.AddOptions<T>();
 
-            var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
+            //var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
 
-            registry?.Register<T>();
+            //registry?.Register<T>(new T());
 
             return this;
         }
@@ -49,14 +49,15 @@ namespace MongoOptions
         /// <returns>The MongoOptionsBuilder for chaining.</returns>
         public MongoOptionsBuilder AddMongoWatch()
         {
-            var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
-            var databaseName = registry?.GetConfigs().Select(o => o.GetDatabaseName(options!)).Distinct().ToList() ?? [];
+            //var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
+            //var databaseName = registry?.GetConfigs().Select(o => o.GetDatabaseName(options!)).Distinct().ToList() ?? [];
 
-            foreach(var group in databaseName)
-            {
-                services.AddKeyedSingleton(group, (sp, key) => new MongoOptionsWatcher(sp, group));
-                services.AddHostedService(sp => sp.GetRequiredKeyedService<MongoOptionsWatcher>(group));
-            }
+            //foreach(var group in databaseName)
+            //{
+            //services.AddKeyedSingleton(group, (sp, key) => new MongoOptionsWatcher(sp, group));
+            //services.AddHostedService(sp => sp.GetRequiredKeyedService<MongoOptionsWatcher>(group));
+            //}
+            services.AddHostedService<MongoOptionsWatcher>();
             return this;
         }
     }

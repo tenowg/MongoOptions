@@ -56,26 +56,26 @@ namespace MongoOptions.Extensions
             /// Gets the properties of the type that are eligible for configuration (readable and writable).
             /// </summary>
             /// <returns>An enumerable collection of eligible properties.</returns>
-            public IEnumerable<PropertyInfo> GetEligibleProperties() =>
-                type.GetProperties().Where(p => p.CanWrite && p.CanRead);
+            //public IEnumerable<PropertyInfo> GetEligibleProperties() =>
+            //    type.GetProperties().Where(p => p.CanWrite && p.CanRead);
 
             /// <summary>
             /// Gets a default value for the type, suitable for initialization.
             /// </summary>
             /// <returns>A default value for the type, or null if no default is applicable.</returns>
-            public object? GetDefaultValue()
-            {
-                if (type == typeof(string)) return string.Empty;
+            //public object? GetDefaultValue()
+            //{
+            //    if (type == typeof(string)) return string.Empty;
 
-                if (type == typeof(Guid)) return Guid.NewGuid();
+            //    if (type == typeof(Guid)) return Guid.NewGuid();
 
-                if (type.IsValueType)
-                {
-                    return Activator.CreateInstance(type);
-                }
+            //    if (type.IsValueType)
+            //    {
+            //        return Activator.CreateInstance(type);
+            //    }
 
-                return null;
-            }
+            //    return null;
+            //}
 
             /// <summary>
             /// Gets a user-friendly type name for UI display purposes.

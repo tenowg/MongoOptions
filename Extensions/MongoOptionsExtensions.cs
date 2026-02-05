@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Extensions;
+using MongoOptions.Interfaces;
 
 namespace MongoOptions.Extensions
 {
@@ -21,7 +21,7 @@ namespace MongoOptions.Extensions
             /// <typeparam name="T">The type of options to configure, must be a class with a parameterless constructor.</typeparam>
             /// <param name="services">The service collection to add the configuration to.</param>
             /// <returns>The service collection for chaining.</returns>
-            public IServiceCollection AddMongoOptions<T>() where T : class, new()
+            public IServiceCollection AddMongoOptions<T>() where T : class, IConfigFile, new()
             {
                 new MongoOptionsBuilder(services).RegisterOptions<T>();
 
@@ -43,6 +43,7 @@ namespace MongoOptions.Extensions
                 services.AddMemoryCache();
                 services.AddSingleton<IMongoClient>(new MongoClient(options.ConnectionString));
                 services.AddScoped<IConfigManager, MongoConfigManager>();
+                services.AddSingleton<MongoConfigRegistry>();
 
                 services.AddSingleton(options);
 
@@ -86,15 +87,11 @@ namespace MongoOptions.Extensions
         public static IApplicationBuilder RunMongoMonitor(this IApplicationBuilder app)
         {
             using var scope = app.ApplicationServices.CreateScope();
-            var myService = scope.ServiceProvider.GetRequiredService<MongoConfigRegistry>();
+            var myService = scope.ServiceProvider.GetRequiredService<IEnumerable<IMongoConnection>>();
 
-            foreach (var item in myService.GetConfigs())
+            foreach (var item in myService)
             {
-                var type = typeof(IOptionsMonitorCache<>).MakeGenericType(item);
-                var monitoredService = scope.ServiceProvider.GetRequiredService(type);
-                var method = type
-                .GetMethod("TryRemove");
-                method?.Invoke(monitoredService, [Options.DefaultName]);
+                item.OnChanged();
             }
 
             return app;

@@ -1,18 +1,27 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Win32;
 using MongoDB.Driver;
 using MongoOptions.Interfaces;
 
 namespace MongoOptions.Services
 {
-    public class MongoOptionsWatcher(IServiceProvider sp, string database) : BackgroundService
+    public class MongoOptionsWatcher(IServiceProvider sp, IEnumerable<IMongoConnection> connections) : BackgroundService
     {
+        private record Database(string database, string collection);
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            var configRegistry = sp.GetRequiredService<MongoConfigRegistry>();
-            var mongoDatabase = sp.GetRequiredService<IMongoClient>().GetDatabase(database);
-            var connections = sp.GetRequiredService<IEnumerable<IMongoConnection>>().Where(o => o.Database == database).ToDictionary(o => o.CollectionName, o => o);
+            var databases = connections.DistinctBy(o => o.Database).Select(o => new Database(o.Database, o.CollectionName)).ToList();
+
+            var tasks = databases.Select(db => RunTasks(db, cancellationToken));
+
+            await Task.WhenAll(tasks);
+        }
+
+        private async Task RunTasks(Database database, CancellationToken cancellationToken)
+        {
+            //var configRegistry = sp.GetRequiredService<MongoConfigRegistry>();
+            var mongoDatabase = sp.GetRequiredService<IMongoClient>().GetDatabase(database.database);
+            var connections = sp.GetRequiredService<IEnumerable<IMongoConnection>>().Where(o => o.Database == database.database).ToDictionary(o => o.CollectionName, o => o);
 
             using var watcher = await mongoDatabase.WatchAsync(cancellationToken: cancellationToken);
 
@@ -20,12 +29,10 @@ namespace MongoOptions.Services
             {
                 foreach (var change in watcher.Current)
                 {
+                    
                     var collectionName = change.CollectionNamespace.CollectionName;
-                    if (connections.TryGetValue(collectionName, out var connection))
-                    {
-                        // Trigger the update logic on the singleton
-                        connection.OnChanged();
-                    }
+                    if (connections.TryGetValue(collectionName, out IMongoConnection? connection))
+                        connection?.OnChanged(change.FullDocument);
                 }
             }
 

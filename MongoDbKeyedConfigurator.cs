@@ -3,11 +3,9 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using MongoOptions.Attributes;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
 using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 
 namespace MongoOptions
 {
@@ -57,7 +55,7 @@ namespace MongoOptions
     /// <param name="cache">The memory cache for storing loaded configurations.</param>
     /// <param name="collection">The MongoDB client.</param>
     /// <param name="options">The MongoDB configuration options.</param>
-    public class MongoDbKeyedConfigurator<T>(IMemoryCache cache, IMongoConnection<T> mongoConnection) : IConfigureNamedOptions<T> where T : class, new()
+    public class MongoDbKeyedConfigurator<T>(IMemoryCache cache, IMongoConnection<T> mongoConnection) : IConfigureNamedOptions<T> where T : class, IConfigFile
     {
         private readonly IMemoryCache _cache = cache;
         private readonly IMongoCollection<ConfigDocument<T>> _collection = mongoConnection.Collection!;
@@ -124,19 +122,9 @@ namespace MongoOptions
             if (cachedSettings != null)
             {
                 // Copy properties from cached object to the 'options' instance
-                foreach (var prop in typeof(T).GetProperties().Where(p => p.CanWrite))
+                foreach (var prop in cachedSettings.Value.GetProperties())
                 {
-                    prop.SetValue(options, prop.GetValue(cachedSettings.Value));
-                }
-
-                var context = new ValidationContext(options);
-                var results = new List<ValidationResult>();
-
-                if (!Validator.TryValidateObject(options, context, results, true))
-                {
-                    var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
-                    // You can log this or throw an exception to prevent bad data from leaking in
-                    throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
+                    prop.Setter(options, prop.Getter(cachedSettings.Value));
                 }
             }
         }
