@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MongoOptions.Interfaces;
 
-namespace MongoOptions
+namespace MongoOptions.Types
 {
     public record PropertyMetadata(
         string Name,

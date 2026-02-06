@@ -16,14 +16,9 @@
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
-
-	<GeneratePackageOnBuild Condition="'$(Configuration)'=='LocalRelease'">true</GeneratePackageOnBuild>
-
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Debug'">false</GeneratePackageOnBuild>
 	  
-	<PackageOutputPath>I:\LocalNuget\</PackageOutputPath>
-	<MinVerDefaultPreReleaseIdentifiers Condition="'$(Configuration)' == 'LocalRelease'">local</MinVerDefaultPreReleaseIdentifiers>
-	<Configurations>Debug;Release;LocalRelease</Configurations>
+	<Configurations>Debug;Release</Configurations>
   </PropertyGroup>
   <PropertyGroup>
 	<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -33,6 +28,7 @@
   </PropertyGroup>
   <ItemGroup>
 	<None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
+	<None Include="MongoOptions.csproj.user" />
   </ItemGroup>
   <ItemGroup>
 	<None Include="README.md" Pack="true" PackagePath="\" />
@@ -53,9 +49,7 @@
 	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\MongoOptions.Generator\MongoOptions.Generator.csproj"
-						  OutputItemType="Analyzer"
-						  ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\MongoOptions.Generator\MongoOptions.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 <PropertyGroup>

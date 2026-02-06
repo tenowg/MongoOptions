@@ -5,6 +5,7 @@
 *.userosscache
 *.sln.doccas
 **/Generated/**
+Directory.build.props
 
 # --- Build Outputs ---
 bin/

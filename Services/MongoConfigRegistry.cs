@@ -1,9 +1,7 @@
 ﻿using MongoDB.Driver;
 using MongoOptions.Interfaces;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 
-namespace MongoOptions
+namespace MongoOptions.Services
 {
     /// <summary>
     /// Registry for tracking registered configuration types.
@@ -17,17 +15,6 @@ namespace MongoOptions
         private readonly Dictionary<string, IMongoConnection> _connections = connections.ToDictionary(o => o.Type.Name, o => o);
 
         /// <summary>
-        /// Registers a configuration type for use with MongoDB options.
-        /// </summary>
-        /// <typeparam name="TConfig">The type of the configuration options to register.</typeparam>
-        //public void Register<TConfig>(TConfig instance) where TConfig : class, IConfigFile
-        //{
-
-        //    _registeredConfigs.Add(typeof(TConfig));
-        //    _configs.TryAdd(nameof(TConfig), instance);
-        //}
-
-        /// <summary>
         /// Gets all registered configuration types.
         /// </summary>
         /// <returns>An enumerable collection of registered configuration types.</returns>
@@ -36,17 +23,17 @@ namespace MongoOptions
 
         public T GetInstance<T>() where T : IConfigFile
         {
-            return (T)_connections.Where(o => o.Key == nameof(T)).Select(o => o.Value.Instance).FirstOrDefault();
+            return (T)_connections.Where(o => o.Key == nameof(T)).Select(o => o.Value.Instance).FirstOrDefault()!;
         }
 
         public IConfigFile GetInstance(Type type)
         {
-            return _connections.Where(o => o.Value.Type == type).Select(o => o.Value.Instance).FirstOrDefault();
+            return _connections.Where(o => o.Value.Type == type).Select(o => o.Value.Instance).FirstOrDefault()!;
         }
 
         public IConfigFile GetInstance(string type)
         {
-            return _connections.Where(o => o.Key == type).Select(o => o.Value.Instance).FirstOrDefault();
+            return _connections.Where(o => o.Key == type).Select(o => o.Value.Instance).FirstOrDefault()!;
         }
     }
 }

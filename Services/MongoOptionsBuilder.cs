@@ -1,12 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Extensions;
 using MongoOptions.Interfaces;
-using MongoOptions.Services;
 
-namespace MongoOptions
+namespace MongoOptions.Services
 {
     /// <summary>
     /// A builder class for configuring multiple options types with MongoDB backing.

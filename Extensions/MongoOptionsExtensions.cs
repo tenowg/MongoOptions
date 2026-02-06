@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Extensions;
 using MongoOptions.Interfaces;
+using MongoOptions.Services;
 
 namespace MongoOptions.Extensions
 {

@@ -1,4 +1,4 @@
-﻿namespace MongoOptions
+﻿namespace MongoOptions.Types
 {
     public class MongoDefaultOptions
     {

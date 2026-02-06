@@ -1,4 +1,6 @@
-﻿namespace MongoOptions.Interfaces
+﻿using MongoOptions.Types;
+
+namespace MongoOptions.Interfaces
 {
     public interface IConfigFile
     {

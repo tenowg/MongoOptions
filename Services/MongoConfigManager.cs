@@ -5,11 +5,12 @@ using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
+using MongoOptions.Types;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace MongoOptions
+namespace MongoOptions.Services
 {
     /// <summary>
     /// Interface for managing configuration options stored in MongoDB.
@@ -41,7 +42,7 @@ namespace MongoOptions
         /// <returns>A list of configuration keys.</returns>
         Task<List<string>> GetKeys<T>() where T : class, IConfigFile;
 
-        Task<List<string>> GetKeys(Type type);
+        //Task<List<string>> GetKeys(Type type);
 
         /// <summary>
         /// Removes a named configuration for the specified type.
@@ -93,9 +94,6 @@ namespace MongoOptions
             var validator = sp.GetService<IValidateOptions<T>>();
             var collection = connection.Collection;
 
-            //var context = new ValidationContext(value);
-            //var results = new List<ValidationResult>();
-
             if (validator != null)
             {
                 var result = validator.Validate(nameof(T), value);
@@ -105,11 +103,6 @@ namespace MongoOptions
                     throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), result.Failures);
                 }
             }
-            //if (!Validator.TryValidateObject(value, context, results, true))
-            //{
-            //    var errors = string.Join(", ", results.Select(r => r.ErrorMessage));
-            //    throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), [errors]);
-            //}
 
             var document = new ConfigDocument<T> { Name = name, Value = value };
             await collection.ReplaceOneAsync(
@@ -127,7 +120,6 @@ namespace MongoOptions
                 name = Options.DefaultName;
             }
             optionsCache.TryRemove(name);
-            //tokenSource?.OnMongoChanged(name);
         }
 
         /// <summary>
@@ -143,14 +135,14 @@ namespace MongoOptions
             return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
         }
 
-        public async Task<List<string>> GetKeys(Type type)
-        {
-            //var connection = sp.GetService<IMongoConnection<T>>();
-            //if (connection == null) { return []; }
+        //public async Task<List<string>> GetKeys(Type type)
+        //{
+        //    //var connection = sp.GetService<IMongoConnection<T>>();
+        //    //if (connection == null) { return []; }
 
-            //return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
-            return [];
-        }
+        //    //return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
+        //    return [];
+        //}
 
         /// <summary>
         /// Removes a named configuration for the specified type.

@@ -6,6 +6,8 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoOptions.Attributes;
 using MongoOptions.Interfaces;
+using MongoOptions.Services;
+using MongoOptions.Types;
 using System.Reflection;
 
 namespace MongoOptions.Data

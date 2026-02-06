@@ -5,9 +5,10 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
+using MongoOptions.Types;
 using System.ComponentModel.DataAnnotations;
 
-namespace MongoOptions
+namespace MongoOptions.Services
 {
     /// <summary>
     /// Represents a configuration document stored in MongoDB.
