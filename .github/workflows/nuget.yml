@@ -9,6 +9,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: "Nuget"
     # Added a condition to ensure we only run if the tag doesn't contain a hyphen (no previews)
     if: "!contains(github.ref_name, '-')"
 
