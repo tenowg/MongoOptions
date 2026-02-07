@@ -7,6 +7,11 @@ namespace MongoOptions.Interfaces
         object Execute<TProperty>(object model, PropertyMetadata prop);
     }
 
+    public interface IDispatcherTwo
+    {
+        object Execute<TKey, TValue>(object model, PropertyMetadata prop);
+    }
+
     public interface IClassDispatcher
     {
         object Execute<TProperty>(object model) where TProperty : class, IConfigFile, new();

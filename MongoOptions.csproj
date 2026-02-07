@@ -17,6 +17,11 @@
 
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 	<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Debug'">false</GeneratePackageOnBuild>
+
+	<PublishAot>false</PublishAot>
+	<IsAotCompatible>true</IsAotCompatible>
+
+	<EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
 	  
 	<Configurations>Debug;Release</Configurations>
   </PropertyGroup>
@@ -29,8 +34,6 @@
   <ItemGroup>
 	<None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
 	<None Include="MongoOptions.csproj.user" />
-  </ItemGroup>
-  <ItemGroup>
 	<None Include="README.md" Pack="true" PackagePath="\" />
 	<None Include="LICENSE.txt" Pack="true" PackagePath="\" />
   </ItemGroup>
@@ -51,14 +54,4 @@
 	<ItemGroup>
 		<ProjectReference Include="..\MongoOptions.Generator\MongoOptions.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
-
-<PropertyGroup>
-  <PublishAot>false</PublishAot>
-  <IsAotCompatible>false</IsAotCompatible>
-</PropertyGroup>
-
-	<PropertyGroup>
-		<EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
-	</PropertyGroup>
-
 </Project>

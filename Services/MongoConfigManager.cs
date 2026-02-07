@@ -98,7 +98,7 @@ namespace MongoOptions.Services
             {
                 var result = validator.Validate(nameof(T), value);
 
-                if (result != null)
+                if (result.Failed)
                 {
                     throw new OptionsValidationException(name ?? MongoDefaultOptions.DefaultName, typeof(T), result.Failures);
                 }

@@ -23,7 +23,12 @@ namespace MongoOptions.Services
             var mongoDatabase = sp.GetRequiredService<IMongoClient>().GetDatabase(database.database);
             var connections = sp.GetRequiredService<IEnumerable<IMongoConnection>>().Where(o => o.Database == database.database).ToDictionary(o => o.CollectionName, o => o);
 
-            using var watcher = await mongoDatabase.WatchAsync(cancellationToken: cancellationToken);
+            var options = new ChangeStreamOptions
+            {
+                FullDocument = ChangeStreamFullDocumentOption.UpdateLookup
+            };
+
+            using var watcher = await mongoDatabase.WatchAsync(options, cancellationToken: cancellationToken);
 
             while (await watcher.MoveNextAsync(cancellationToken))
             {
