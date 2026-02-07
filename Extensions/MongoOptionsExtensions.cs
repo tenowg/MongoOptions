@@ -45,6 +45,7 @@ namespace MongoOptions.Extensions
                 services.AddSingleton<IMongoClient>(new MongoClient(options.ConnectionString));
                 services.AddScoped<IConfigManager, MongoConfigManager>();
                 services.AddSingleton<MongoConfigRegistry>();
+                services.AddSingleton<InternalCacheService>();
 
                 services.AddSingleton(options);
 
@@ -92,7 +93,8 @@ namespace MongoOptions.Extensions
 
             foreach (var item in myService)
             {
-                item.OnChanged();
+                //item.OnChanged();
+                item.OnStarted();
             }
 
             return app;

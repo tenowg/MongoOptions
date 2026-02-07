@@ -6,7 +6,6 @@ using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
 using MongoOptions.Types;
-using System.ComponentModel.DataAnnotations;
 
 namespace MongoOptions.Services
 {
@@ -56,9 +55,8 @@ namespace MongoOptions.Services
     /// <param name="cache">The memory cache for storing loaded configurations.</param>
     /// <param name="collection">The MongoDB client.</param>
     /// <param name="options">The MongoDB configuration options.</param>
-    public class MongoDbKeyedConfigurator<T>(IMemoryCache cache, IMongoConnection<T> mongoConnection) : IConfigureNamedOptions<T> where T : class, IConfigFile
+    public class MongoDbKeyedConfigurator<T>(IMongoConnection<T> mongoConnection, InternalCacheService cache) : IConfigureNamedOptions<T> where T : class, IConfigFile
     {
-        private readonly IMemoryCache _cache = cache;
         private readonly IMongoCollection<ConfigDocument<T>> _collection = mongoConnection.Collection!;
         private readonly MongoConfigurationOptions _configuration = mongoConnection.MongoConfigs;
         private readonly IOptionsMonitorCache<T> optionsMonitor = mongoConnection.OptionsCache;
@@ -83,9 +81,7 @@ namespace MongoOptions.Services
                         ? MongoDefaultOptions.DefaultName
                         : name;
 
-            string cacheKey = $"{mongoConnection.MongoConfigs.CachePrefix}{typeof(T).Name}_{lookupName}";
-
-            if (!_cache.TryGetValue(cacheKey, out ConfigDocument<T>? cachedSettings) || cachedSettings!.IsExpired)
+            if (!cache.TryGet(lookupName, out ConfigDocument<T>? cachedSettings) || cachedSettings!.IsExpired)
             {
                 try
                 {
@@ -96,14 +92,7 @@ namespace MongoOptions.Services
                     {
                         cachedSettings = freshResult;
                         cachedSettings.ExpiresAt = DateTime.UtcNow.Add(_configuration.CacheSoftDuration);
-                        _cache.Set(cacheKey, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));
-                        if (name == MongoDefaultOptions.DefaultName || string.IsNullOrEmpty(name))
-                        {
-                            mongoConnection.OnChanged(Options.DefaultName);
-                        } else
-                        {
-                            mongoConnection.OnChanged(name);
-                        }                    
+                        cache.Add(lookupName, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));                   
                     }
                 }
                 catch
@@ -111,7 +100,7 @@ namespace MongoOptions.Services
                     if (cachedSettings != null)
                     {
                         cachedSettings.ExpiresAt = DateTime.UtcNow.AddMinutes(1);
-                        _cache.Set(cacheKey, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));
+                        cache.Add(lookupName, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));
                     }
                     else
                     {

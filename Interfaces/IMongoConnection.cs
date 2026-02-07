@@ -19,6 +19,7 @@ namespace MongoOptions.Interfaces
 
         IOptionsMonitor<T> GetMonitor();
         void OnChanged(string? name = null);
+        void OnStarted(string? name = null);
     }
 
     public interface IMongoConnection
@@ -29,5 +30,6 @@ namespace MongoOptions.Interfaces
         Type Type { get; }
         void OnChanged(string? name = null);
         void OnChanged(BsonDocument fullDocument);
+        void OnStarted(string? name = null);
     }
 }

@@ -16,4 +16,9 @@ namespace MongoOptions.Interfaces
     {
         object Execute<TProperty>(object model) where TProperty : class, IConfigFile, new();
     }
+
+    public interface IClassDispatcherTwo
+    {
+        object Execute<TKey, TValue>(object model) where TValue : class, IConfigFile, new();
+    }
 }

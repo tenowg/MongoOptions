@@ -9,6 +9,7 @@ using MongoOptions.Interfaces;
 using MongoOptions.Services;
 using MongoOptions.Types;
 using System.Reflection;
+using System.Xml.Linq;
 
 namespace MongoOptions.Data
 {
@@ -23,16 +24,18 @@ namespace MongoOptions.Data
         public MongoConfigurationOptions MongoConfigs { get; set; }
         public Type Type { get; set; } = typeof(T);
         public IConfigFile Instance { get; set; }
+        public InternalCacheService Cache { get; set; }
 
         private IServiceProvider sp { get; set; }
 
-        public MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, MongoConfigurationOptions options)
+        public MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, InternalCacheService cache, MongoConfigurationOptions options)
         {
             OptionsCache = optionsCache;
             OptionsChange = optionsChange;
             MongoConfigs = options;
             Instance = new T();
             this.sp = sp;
+            Cache = cache;
 
             var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionAttribute>();
             CollectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
@@ -46,9 +49,20 @@ namespace MongoOptions.Data
             };
         }
 
-        public IOptionsMonitor<T>? GetMonitor()
+        public IOptionsMonitor<T> GetMonitor()
         {
             return sp.GetService<IOptionsMonitor<T>>();
+        }
+
+        public void OnStarted(string? name = null)
+        {
+            if (name == null || name == MongoDefaultOptions.DefaultName)
+            {
+                name = Options.DefaultName;
+            }
+
+            //((MongoChangeTokenSource<T>)OptionsChange).OnMongoChanged(name);
+            OptionsCache.TryRemove(name);
         }
 
         public void OnChanged(string? name = null)
@@ -57,7 +71,7 @@ namespace MongoOptions.Data
             {
                 name = Options.DefaultName;
             }
-
+            Cache.Remove<T>(name);
             ((MongoChangeTokenSource<T>)OptionsChange).OnMongoChanged(name);
             OptionsCache.TryRemove(name);
         }

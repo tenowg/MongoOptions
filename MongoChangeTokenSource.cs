@@ -8,7 +8,7 @@ namespace MongoOptions
     {
         // Tracks a separate signal for every name (e.g., "Default", "TenantA", "TenantB")
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _signals = new();
-
+        private CancellationTokenSource _tokenSource;
         // Returning null or an empty string here tells the system 
         // this source can handle various names.
         public string? Name => null;
@@ -23,13 +23,15 @@ namespace MongoOptions
         public IChangeToken GetTokenForName(string name)
         {
             var cts = _signals.GetOrAdd(name, _ => new CancellationTokenSource());
+            //_tokenSource = new CancellationTokenSource();
             return new CancellationChangeToken(cts.Token);
+            //return new CancellationChangeToken(_tokenSource.Token);
         }
 
         public void OnMongoChanged(string name)
         {
             name ??= Options.DefaultName;
-            if (_signals.TryRemove(name, out var cts))
+            if (_signals.TryRemove(Options.DefaultName, out var cts))
             {
                 cts.Cancel(); // This triggers the OnChanged for this specific name
                 cts.Dispose();

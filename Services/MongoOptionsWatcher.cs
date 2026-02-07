@@ -1,7 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
+using MongoOptions.Data;
 using MongoOptions.Interfaces;
+using System.Xml.Linq;
 
 namespace MongoOptions.Services
 {
@@ -37,7 +41,9 @@ namespace MongoOptions.Services
                     
                     var collectionName = change.CollectionNamespace.CollectionName;
                     if (connections.TryGetValue(collectionName, out IMongoConnection? connection))
+                    {
                         connection?.OnChanged(change.FullDocument);
+                    }
                 }
             }
 
