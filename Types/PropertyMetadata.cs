@@ -18,12 +18,11 @@ namespace MongoOptions.Types
         Func<object> NewTypePropertyOne,
         Type GenericPropertyOneType,
         Func<object> NewTypePropertyTwo,
-        Type GenericPropertyTwoType
+        Type GenericPropertyTwoType,
+        Func<object, object, PropertyMetadata, object> AotDispatch
     )
     {
         public bool HasGenericPropertyOne => NewTypePropertyOne != null;
         public bool HasGenericPropertyTwo => NewTypePropertyTwo != null;
-
-
     };
 }

@@ -21,4 +21,16 @@ namespace MongoOptions.Interfaces
     {
         object Execute<TKey, TValue>(object model) where TValue : class, IConfigFile, new();
     }
+
+    // This remains the 'gateway' for AOT to see the generic path
+    public interface IDispatcherGateway<out TReturn>
+    {
+        TReturn Execute<T>(object model, PropertyMetadata prop);
+        TReturn Execute<TKey, TValue>(object model, PropertyMetadata prop);
+    }
+
+    public interface IConfigDispatcherGateway<out TReturn>
+    {
+        TReturn Execute<T>(object model) where T : class, IConfigFile, new();
+    }
 }

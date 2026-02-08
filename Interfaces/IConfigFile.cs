@@ -7,6 +7,6 @@ namespace MongoOptions.Interfaces
         IEnumerable<PropertyMetadata> GetProperties();
         Type GetConfigType();
         Type GetMonitorType();
-        object Dispatcher(object model, IClassDispatcher receiver);
+        object Dispatcher(object model, object receiver);
     }
 }
