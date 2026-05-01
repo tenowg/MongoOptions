@@ -9,7 +9,6 @@ using MongoOptions.Interfaces;
 using MongoOptions.Services;
 using MongoOptions.Types;
 using System.Reflection;
-using System.Xml.Linq;
 
 namespace MongoOptions.Data
 {
@@ -76,8 +75,14 @@ namespace MongoOptions.Data
             OptionsCache.TryRemove(name);
         }
 
-        public void OnChanged(BsonDocument fullDocument)
+        public void OnChanged(BsonDocument? fullDocument)
         {
+            if (fullDocument == null)
+            {
+                OnChanged();
+                return;
+            }
+
             var updatedConfig = BsonSerializer.Deserialize<ConfigDocument<T>>(fullDocument);
 
             OnChanged(updatedConfig.Name);

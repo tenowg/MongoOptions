@@ -1,7 +1,7 @@
 ﻿namespace MongoOptions.Attributes
 {
     [AttributeUsage(AttributeTargets.Class)]
-    public class SubClassAttribute : Attribute
+    public class MongoLazyAttribute : Attribute
     {
     }
 }

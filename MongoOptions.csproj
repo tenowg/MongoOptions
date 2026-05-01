@@ -46,7 +46,7 @@
 		<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	</PackageReference>
 
-    <PackageReference Include="MongoDB.Driver" Version="3.6.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.8.0" />
   </ItemGroup>
   <ItemGroup>
 	<None Include="..\MongoOptions.Generator\bin\$(Configuration)\netstandard2.0\MongoOptions.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />

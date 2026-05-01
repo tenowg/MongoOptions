@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MongoOptions.Attributes;
 using MongoOptions.Data;
 using MongoOptions.Extensions;
 using MongoOptions.Interfaces;
+using System.Reflection;
 
 namespace MongoOptions.Services
 {
@@ -30,6 +32,10 @@ namespace MongoOptions.Services
             services.AddSingleton<IOptionsChangeTokenSource<T>, MongoChangeTokenSource<T>>();
             services.AddSingleton<IMongoConnection<T>, MongoConnection<T>>();
             services.AddSingleton<IMongoConnection, MongoConnection<T>>();
+
+            var attr = typeof(T).GetCustomAttribute<MongoLazyAttribute>();
+            if (attr != null)
+                services.AddSingleton<IOptionsLazy<T>, MongoLazyConnection<T>>();
 
             services.AddOptions<T>();
 

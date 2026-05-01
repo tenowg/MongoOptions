@@ -34,17 +34,23 @@ namespace MongoOptions.Services
 
             using var watcher = await mongoDatabase.WatchAsync(options, cancellationToken: cancellationToken);
 
-            while (await watcher.MoveNextAsync(cancellationToken))
+            try
             {
-                foreach (var change in watcher.Current)
+                while (await watcher.MoveNextAsync(cancellationToken))
                 {
-                    
-                    var collectionName = change.CollectionNamespace.CollectionName;
-                    if (connections.TryGetValue(collectionName, out IMongoConnection? connection))
+                    foreach (var change in watcher.Current)
                     {
-                        connection?.OnChanged(change.FullDocument);
+
+                        var collectionName = change.CollectionNamespace.CollectionName;
+                        if (connections.TryGetValue(collectionName, out IMongoConnection? connection))
+                        {
+                            connection?.OnChanged(change.FullDocument);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
             }
 
         }

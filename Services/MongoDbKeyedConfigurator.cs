@@ -32,6 +32,8 @@ namespace MongoOptions.Services
         /// </summary>
         public T Value { get; set; }
 
+        public Dictionary<string, object> Metadata = [];
+
         /// <summary>
         /// The expiration time for caching purposes.
         /// </summary>
