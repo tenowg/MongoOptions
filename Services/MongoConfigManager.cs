@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -8,6 +9,7 @@ using MongoOptions.Interfaces;
 using MongoOptions.Types;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MongoOptions.Services
@@ -24,7 +26,7 @@ namespace MongoOptions.Services
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value) where T : class, IConfigFile;
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile;
 
         /// <summary>
         /// Updates a named configuration for the specified type.
@@ -33,16 +35,53 @@ namespace MongoOptions.Services
         /// <param name="name">The name of the configuration instance.</param>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value) where T : class, IConfigFile;
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile;
 
         /// <summary>
         /// Retrieves all configuration keys for the specified type.
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
+        /// <param name="requiredMetadata">An optional metadata filter, checks for equality on all metadata entries</param>
         /// <returns>A list of configuration keys.</returns>
-        Task<List<string>> GetKeys<T>() where T : class, IConfigFile;
+        Task<List<string>> GetKeys<T>(Dictionary<string, object>? requiredMetadata = null) where T : class, IConfigFile;
 
-        //Task<List<string>> GetKeys(Type type);
+        /// <summary>
+        /// Asynchronously retrieves the names of configuration documents that match the specified filter.
+        /// </summary>
+        /// <typeparam name="T">The type of configuration file. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="filterBuilder">A function that receives a FilterDefinitionBuilder for ConfigDocument<T> and returns a filter definition
+        /// specifying which documents to match.</param>
+        /// <returns>A task representing the asynchronous operation. The task result contains a list of strings with the names of
+        /// the matching configuration documents. The list is empty if no documents match the filter.</returns>
+        Task<List<string>> GetKeys<T>(
+            Func<FilterDefinitionBuilder<ConfigDocument<T>>, FilterDefinition<ConfigDocument<T>>> filterBuilder)
+            where T : class, IConfigFile;
+
+        /// <summary>
+        /// Determines whether a configuration file with the specified name and optional metadata exists in the
+        /// underlying data store.
+        /// </summary>
+        /// <typeparam name="T">The type of configuration file to check for. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="configName">The name of the configuration file to search for. Cannot be null.</param>
+        /// <param name="requiredMetadata">An optional dictionary of metadata key-value pairs that the configuration file must match. If null, only the
+        /// name is used for the search.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if a
+        /// configuration file matching the specified criteria exists; otherwise, <see langword="false"/>.</returns>
+        Task<bool> HasConfig<T>(string configName, Dictionary<string, object>? requiredMetadata = null) where T : class, IConfigFile;
+
+        /// <summary>
+        /// Determines whether a configuration document with the specified name exists and matches the given filter
+        /// criteria.
+        /// </summary>
+        /// <remarks>This method queries the underlying MongoDB collection for a configuration document
+        /// with the specified name and additional filter criteria. Returns false if the collection is not
+        /// available.</remarks>
+        /// <typeparam name="T">The type of the configuration file. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="configName">The name of the configuration document to search for. Cannot be null.</param>
+        /// <param name="filterBuilder">A function that builds a filter definition to apply additional criteria to the search. Cannot be null.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if a matching configuration
+        /// document exists; otherwise, false.</returns>
+        Task<bool> HasConfig<T>(string configName, Func<FilterDefinitionBuilder<ConfigDocument<T>>, FilterDefinition<ConfigDocument<T>>> filterBuilder) where T : class, IConfigFile;
 
         /// <summary>
         /// Removes a named configuration for the specified type.
@@ -74,9 +113,9 @@ namespace MongoOptions.Services
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value) where T : class, IConfigFile
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile
         {
-            await UpdateConfigAsync("Default", value);
+            await UpdateConfigAsync("Default", value, metadata);
         }
 
         /// <summary>
@@ -88,11 +127,16 @@ namespace MongoOptions.Services
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="OptionsValidationException">Thrown if the value fails validation.</exception>
-        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value) where T : class, IConfigFile
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
             var validator = sp.GetService<IValidateOptions<T>>();
             var collection = connection.Collection;
+
+            if (collection == null)
+            {
+                throw new ArgumentNullException(nameof(collection));
+            }
 
             if (validator != null)
             {
@@ -104,17 +148,23 @@ namespace MongoOptions.Services
                 }
             }
 
-            var document = new ConfigDocument<T> { Name = name, Value = value };
-            await collection.ReplaceOneAsync(
-                filter: d => d.Name == name,
-                replacement: document,
-                options: new ReplaceOptions { IsUpsert = true }
-            );
+            var filter = Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name);
+            var update = Builders<ConfigDocument<T>>.Update
+                .Set(d => d.Name, name)
+                .Set(d => d.Value, value);
+
+            if (metadata != null)
+            {
+                update = update.Set(d => d.Metadata, metadata);
+            }
+
+            var options = new UpdateOptions { IsUpsert = true };
+
+            await collection.UpdateOneAsync(filter, update, options);
 
             string cacheKey = $"{configuration.CachePrefix}{typeof(T).Name}_{name}";
             cache.Remove(cacheKey);
             IOptionsMonitorCache<T> optionsCache = sp.GetRequiredService<IOptionsMonitorCache<T>>();
-            MongoChangeTokenSource<T>? tokenSource = sp.GetRequiredService<IOptionsChangeTokenSource<T>>() as MongoChangeTokenSource<T>;
             if (name  == MongoDefaultOptions.DefaultName)
             {
                 name = Options.DefaultName;
@@ -127,22 +177,48 @@ namespace MongoOptions.Services
         /// </summary>
         /// <typeparam name="T">The type of the configuration options.</typeparam>
         /// <returns>A list of configuration keys.</returns>
-        public async Task<List<string>> GetKeys<T>() where T : class, IConfigFile
+        public async Task<List<string>> GetKeys<T>(Dictionary<string, object>? requiredMetadata = null) where T : class, IConfigFile
         {
             var connection = sp.GetService<IMongoConnection<T>>();
             if (connection == null) { return []; }
 
-            return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
+            var filter = Builders<ConfigDocument<T>>.Filter.Empty;
+
+            filter = BuildMetaDataFilter<ConfigDocument<T>>(requiredMetadata, filter);
+
+            var projection = Builders<ConfigDocument<T>>.Projection
+                .Include(x => x.Name);
+
+            return await connection.Collection
+                .Find(filter)
+                .Project(d => d.Name) //projection)
+                .ToListAsync();
+
         }
 
-        //public async Task<List<string>> GetKeys(Type type)
-        //{
-        //    //var connection = sp.GetService<IMongoConnection<T>>();
-        //    //if (connection == null) { return []; }
+        /// <summary>
+        /// Asynchronously retrieves the names of configuration documents that match the specified filter.
+        /// </summary>
+        /// <typeparam name="T">The type of configuration file. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="filterBuilder">A function that receives a FilterDefinitionBuilder for ConfigDocument<T> and returns a filter definition
+        /// specifying which documents to match.</param>
+        /// <returns>A task representing the asynchronous operation. The task result contains a list of strings with the names of
+        /// the matching configuration documents. The list is empty if no documents match the filter.</returns>
+        public async Task<List<string>> GetKeys<T>(
+            Func<FilterDefinitionBuilder<ConfigDocument<T>>, FilterDefinition<ConfigDocument<T>>> filterBuilder)
+            where T : class, IConfigFile
+        {
+            var connection = sp.GetService<IMongoConnection<T>>();
+            if (connection == null) { return []; }
 
-        //    //return await connection.Collection.AsQueryable().Select(o => o.Name).ToListAsync() ?? [];
-        //    return [];
-        //}
+            // Execute the caller's lambda to generate the filter
+            var filter = filterBuilder(Builders<ConfigDocument<T>>.Filter);
+
+            return await connection.Collection
+                .Find(filter)
+                .Project(d => d.Name)
+                .ToListAsync();
+        }
 
         /// <summary>
         /// Removes a named configuration for the specified type.
@@ -153,9 +229,64 @@ namespace MongoOptions.Services
         public async Task RemoveConfig<T>(string name) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
-            //var collection = GetCollection<T>();
 
             await connection.Collection.DeleteOneAsync(o => o.Name == name);
+        }
+
+        /// <summary>
+        /// Determines whether a configuration file with the specified name and optional metadata exists in the
+        /// underlying data store.
+        /// </summary>
+        /// <typeparam name="T">The type of configuration file to check for. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="configName">The name of the configuration file to search for. Cannot be null.</param>
+        /// <param name="requiredMetadata">An optional dictionary of metadata key-value pairs that the configuration file must match. If null, only the
+        /// name is used for the search.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if a
+        /// configuration file matching the specified criteria exists; otherwise, <see langword="false"/>.</returns>
+        public async Task<bool> HasConfig<T>(string configName, Dictionary<string, object>? requiredMetadata = null) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+
+            if (connection.Collection == null) return false;
+
+            var filter = Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, configName);
+            
+            filter = BuildMetaDataFilter(requiredMetadata, filter);
+
+            var result = await connection.Collection.FindAsync(filter);
+            var item = result.FirstOrDefault();
+
+            if (item == null || item.Name != configName) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Determines whether a configuration document with the specified name exists and matches the given filter
+        /// criteria.
+        /// </summary>
+        /// <remarks>This method queries the underlying MongoDB collection for a configuration document
+        /// with the specified name and additional filter criteria. Returns false if the collection is not
+        /// available.</remarks>
+        /// <typeparam name="T">The type of the configuration file. Must implement the IConfigFile interface.</typeparam>
+        /// <param name="configName">The name of the configuration document to search for. Cannot be null.</param>
+        /// <param name="filterBuilder">A function that builds a filter definition to apply additional criteria to the search. Cannot be null.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if a matching configuration
+        /// document exists; otherwise, false.</returns>
+        public async Task<bool> HasConfig<T>(string configName, Func<FilterDefinitionBuilder<ConfigDocument<T>>, FilterDefinition<ConfigDocument<T>>> filterBuilder) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+
+            if (connection.Collection == null) return false;
+
+            var filter1 = Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, configName);
+
+            var filter = filterBuilder(Builders<ConfigDocument<T>>.Filter);
+
+            var result = await connection.Collection.FindAsync(Builders<ConfigDocument<T>>.Filter.And(filter1, filter));
+            var item = result.FirstOrDefault();
+
+            if (item == null || item.Name != configName) return false;
+            return true;
         }
 
         /// <summary>
@@ -168,7 +299,6 @@ namespace MongoOptions.Services
         public async Task CloneConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string sourceName, string targetName) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
-            //var collection = GetCollection<T>();
 
             var source = await connection.Collection.Find(d => d.Name == sourceName).FirstOrDefaultAsync();
 
@@ -177,21 +307,21 @@ namespace MongoOptions.Services
                 await UpdateConfigAsync(targetName, source.Value);
             }
         }
+        
+        private FilterDefinition<T> BuildMetaDataFilter<T>(Dictionary<string, object>? requiredMetadata, FilterDefinition<T> filter) where T : class
+        {
+            if (requiredMetadata != null && requiredMetadata.Count > 0)
+            {
+                foreach (var kvp in requiredMetadata)
+                {
+                    filter &= Builders<T>.Filter.Eq(
+                        $"Metadata.{kvp.Key}",
+                        kvp.Value);
+                }
+            }
 
-        /// <summary>
-        /// Gets the MongoDB collection for the specified type, using attributes for naming.
-        /// </summary>
-        /// <typeparam name="T">The type of the configuration options.</typeparam>
-        /// <returns>The MongoDB collection for the type.</returns>
-        //private IMongoCollection<ConfigDocument<T>> GetCollection<T>()
-        //{
-        //    var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionAttribute>();
-
-        //    var collectionName = optionsAttr?.CollectionName ?? typeof(T).Name;
-        //    var databaseName = optionsAttr?.DatabaseName ?? configuration.DatabaseName;
-
-        //    var database = client.GetDatabase(databaseName);
-        //    return database.GetCollection<ConfigDocument<T>>(collectionName);
-        //}
+            return filter;
+        }
+                
     }
 }
