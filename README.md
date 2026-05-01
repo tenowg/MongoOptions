@@ -13,6 +13,7 @@ Update your config files without reloading you project.
 * **Keyed/Named Options**: Support for multiple configuration instances (e.g., Tenant-specific settings).
 * **Data Validation**: Built-in support for Data Annotations to keep your DB clean.
 * **Management API**: Full CRUD support for managing configs via code (perfect for Blazor Admin UIs).
+* **Metadata Search**: Config files can be stored with metadata, and you can retrieve Keys based on metadata
 
 ## 📦 Installation
 
@@ -47,8 +48,18 @@ public partial FeatureSettingsValidator : IValidateOption<FeatureSettings>
 MongoOption Attribute is required for Source Generation, you don't need to assign a custom Database name or CollectionName.
 
 Source Generation has been added [MongoOptions.Generator](https://github.com/tenowg/MongoOptions.Generator). It is keyed to the attribute [MongoOptions]
-So if you want to make your life even easier, just tag you POCOs with [MongoOption] and add .RegisterDiscoveredOptions()
+So if you want to make your life even easier, just tag you POCOs with [MongoOption] and add .RegisterProjectNameDiscoveredOptions()
 to your DI Configurtion and all your Configurations will magically be added.
+
+```csharp
+[MongoObject]
+[MongoLazy]
+public partial class FeatureList
+{
+    public List<string> List { get; set; } = [];
+}
+```
+MongoLazy was introduced to work with List and other collections, it was designed to allow for adding to lists without loading the full data object into memory.
 
 ### 2. Register in Program.cs
 
@@ -60,14 +71,17 @@ builder.Services.AddMongoConfiguration(config =>
     config.ConnectionString = "mongodb://localhost:27017";
     config.DatabaseName = "MyProductionApp";
 })
-.RegisterOptions<FeatureSettings>();
+~~.RegisterOptions<FeatureSettings>()~~
 OR
-.RegisterDiscoveredOptions();
+.RegisterProjectNameDiscoveredOptions()
+.RegisterOtherProjectDiscoveredOptions()
 .AddMongoWatch();
 ```
 
+When using the extension generated from codegen, it will make an extension for each project in your solution that references MongoOptions, this is the highly recommeneded way to add DI registration.
+
 AddMongoWatch(): Uses Change Stream from MongoDB to update configs on Database change, your database needs to be a replica set.
-This will be option, as there is also an internal mechanism to handle changes. This is mostly useful for Multi server syncing.
+This will be optional, as there is also an internal mechanism to handle changes. This is mostly useful for Multi server syncing.
 This will be extendable, so look for Redis versions in the near future.
 
 If you plan on using IOptionsMontor there is one more thing you need to add to your app.
@@ -97,6 +111,25 @@ public class MyService(IOptionsSnapshot<FeatureSettings> settings)
 }
 ```
 
+Inject `IOptionsLazy<T>` to be able to append to Collections without loading the full data object, you don't need to 
+inject both as in the example, useful if you have a Service that only adds to a list
+
+```csharp
+public FeaturesConstructor(IOptionLazy<FeatureList> list, IOptionsMonitor<FeatureList> object)
+{
+    public async Task AddToList(string configName, string entry)
+    {
+        await list.PushAsync(configName, x => x.List, entry);
+    }
+
+    public void UseTheDataLater(string configName)
+    {
+        var data = object.Get(configName);
+        ...
+    }
+}
+```
+
 ## 🛡️ Validation & Resilience
 
 This library ensures your app never runs with "garbage" data.
@@ -121,6 +154,35 @@ await _configManager.RemoveConfig<FeatureSettings>("OldTenant");
 
 // Clone
 await _configManager.CloneConfigAsync<FeatureSettings>("SourceTenant", "TargetTenant");
+```
+
+## Change Detection
+
+Get immediate changes on change from the database, this only works with `IOptionsMonitor<T>`, it is very useful for syncing cross server, as all servers will receive the change notification as soon as
+any change is made to the database entry.
+```razor
+@inject IOptionsMonitor<T> OptionsAccessor
+@implements IDisposable
+
+@code {
+    private IDisposable? _onChangeToken;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _onChangeToken = OptionsAccessor.OnChange((e) => {
+            LoadSelectedConfig();
+            InvokeAsync(StateHasChanged);
+       });
+    }
+
+    private void LoadSelectedConfig()
+    {
+        _editingModel = OptionsAccessor.Get(_selectedKey);
+    }
+
+    public void Dispose() => _onChangeToken?.Dispose();
+}
+
 ```
 
 ## 📚 API Reference
