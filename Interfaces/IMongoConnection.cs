@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoOptions.Data;
-using MongoOptions.Services;
 
 namespace MongoOptions.Interfaces
 {
@@ -31,5 +30,6 @@ namespace MongoOptions.Interfaces
         void OnChanged(string? name = null);
         void OnChanged(BsonDocument fullDocument);
         void OnStarted(string? name = null);
+        Task EnsureIndices();
     }
 }

@@ -87,5 +87,39 @@ namespace MongoOptions.Data
 
             OnChanged(updatedConfig.Name);
         }
+
+        public async Task EnsureIndices()
+        {
+            await Collection.Indexes.CreateOneAsync(
+                new CreateIndexModel<ConfigDocument<T>>(
+                    Builders<ConfigDocument<T>>.IndexKeys.Ascending(x => x.LockMetadata.LockExpiresAt),
+                    new CreateIndexOptions
+                    {
+                        Name = "LockExpiresAt_Index",
+                        Unique = false
+                    }
+                ));
+
+            await Collection.Indexes.CreateOneAsync(
+                new CreateIndexModel<ConfigDocument<T>>(
+                    Builders<ConfigDocument<T>>.IndexKeys.Ascending(x => x.Name),
+                    new CreateIndexOptions
+                    {
+                        Name = "Name_1",
+                        Unique = true   // set to true if Name should be unique per collection
+                    }
+                ));
+            await Collection.Indexes.CreateOneAsync(
+                new CreateIndexModel<ConfigDocument<T>>(
+                    Builders<ConfigDocument<T>>.IndexKeys
+                        .Ascending(x => x.Name)
+                        .Ascending(x => x.LockMetadata.LockedBy),
+                    new CreateIndexOptions
+                    {
+                        Name = "Name_LockedBy_Index",
+                        Unique = false
+                    }
+                ));
+        }
     }
 }

@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
@@ -9,42 +7,6 @@ using MongoOptions.Types;
 
 namespace MongoOptions.Services
 {
-    /// <summary>
-    /// Represents a configuration document stored in MongoDB.
-    /// </summary>
-    /// <typeparam name="T">The type of the configuration value.</typeparam>
-    public class ConfigDocument<T>
-    {
-        /// <summary>
-        /// The MongoDB ObjectId for the document.
-        /// </summary>
-        [BsonId]
-        [BsonIgnoreIfDefault]
-        public ObjectId? Id { get; set; }
-
-        /// <summary>
-        /// The name of the configuration instance.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// The configuration value.
-        /// </summary>
-        public T Value { get; set; }
-
-        public Dictionary<string, object> Metadata = [];
-
-        /// <summary>
-        /// The expiration time for caching purposes.
-        /// </summary>
-        [BsonIgnore]
-        public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(10);
-
-        /// <summary>
-        /// Indicates whether the cached item has expired.
-        /// </summary>
-        public bool IsExpired => DateTime.UtcNow > ExpiresAt;
-    }
 
     /// <summary>
     /// Configures named options by loading them from MongoDB with caching and validation.

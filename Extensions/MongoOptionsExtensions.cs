@@ -86,18 +86,31 @@ namespace MongoOptions.Extensions
             }
         }
 
-        public static IApplicationBuilder RunMongoMonitor(this IApplicationBuilder app)
+        extension(IApplicationBuilder app)
         {
-            using var scope = app.ApplicationServices.CreateScope();
-            var myService = scope.ServiceProvider.GetRequiredService<IEnumerable<IMongoConnection>>();
-
-            foreach (var item in myService)
+            public IApplicationBuilder RunMongoMonitor()
             {
-                //item.OnChanged();
-                item.OnStarted();
+                using var scope = app.ApplicationServices.CreateScope();
+                var myService = scope.ServiceProvider.GetRequiredService<IEnumerable<IMongoConnection>>();
+
+                foreach (var item in myService)
+                {
+                    item.OnStarted();
+                }
+
+                return app;
             }
 
-            return app;
+            public async Task<IApplicationBuilder> BuildIndexes()
+            {
+                using var scope = app.ApplicationServices.CreateScope();
+                var services = scope.ServiceProvider.GetRequiredService<IEnumerable<IMongoConnection>>();
+                foreach(var item in services)
+                {
+                    await item.EnsureIndices();
+                }
+                return app;
+            }
         }
     }
 }

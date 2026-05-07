@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoOptions.Interfaces;
-using MongoOptions.Services;
 using MongoOptions.Types;
 using System.Linq.Expressions;
 
@@ -30,7 +29,7 @@ namespace MongoOptions.Data
             // 2. Prepend "Value." to map it to your MongoDB wrapper document
             string mongoFieldPath = $"Value.{propertyName}";
 
-            var filter = BuildBaseFilter(name, securityFilter);
+            var filter = MongoLazyConnection<T>.BuildBaseFilter(name, securityFilter);
 
             // 3. MongoDB driver automatically casts the string to FieldDefinition!
             var update = Builders<ConfigDocument<T>>.Update
@@ -51,7 +50,7 @@ namespace MongoOptions.Data
             optionsCache.TryRemove(name);
         }
 
-        private FilterDefinition<ConfigDocument<T>> BuildBaseFilter(
+        private static FilterDefinition<ConfigDocument<T>> BuildBaseFilter(
         string name,
         Expression<Func<ConfigDocument<T>, bool>>? extraSecurity = null)
         {
