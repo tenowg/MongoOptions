@@ -14,6 +14,7 @@ Update your config files without reloading you project.
 * **Data Validation**: Built-in support for Data Annotations to keep your DB clean.
 * **Management API**: Full CRUD support for managing configs via code (perfect for Blazor Admin UIs).
 * **Metadata Search**: Config files can be stored with metadata, and you can retrieve Keys based on metadata
+* **Distributed Locking** Write Lock objects with custom Timeouts
 
 ## 📦 Installation
 
@@ -86,7 +87,10 @@ This will be extendable, so look for Redis versions in the near future.
 
 If you plan on using IOptionsMontor there is one more thing you need to add to your app.
 
+BuildIndexes(): To improve the speed of Mongo Operations, you should use the BuildIndexes after you build. This will handle both Locks and options lookup.
+
 ```csharp
+await app.BuildIndexes();
 app.RunMongoMonitor();
 ```
 
