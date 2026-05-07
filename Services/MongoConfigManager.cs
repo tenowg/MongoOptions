@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoOptions.Data;
+using MongoOptions.Exceptions;
 using MongoOptions.Interfaces;
 using MongoOptions.Types;
 using System.Diagnostics.CodeAnalysis;
@@ -33,7 +34,7 @@ namespace MongoOptions.Services
         /// <param name="name">The name of the configuration instance.</param>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile;
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, string? lockId = null) where T : class, IConfigFile;
 
         Task<LockAcquisitionResult> LockRecordAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string? holderId = null, TimeSpan? duration = null) where T : class, IConfigFile;            // auto-generated if null
 
@@ -41,7 +42,7 @@ namespace MongoOptions.Services
 
         Task ReleaseLockAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string holderId) where T : class, IConfigFile;
 
-        Task<IAsyncDisposable> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, TimeSpan? duration = null) where T : class, IConfigFile;
+        Task<IMongoLockScope> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, TimeSpan? duration = null) where T : class, IConfigFile;
 
         /// <summary>
         /// This is for debug purposes only, and will be removed for preferred private access
@@ -141,7 +142,7 @@ namespace MongoOptions.Services
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="OptionsValidationException">Thrown if the value fails validation.</exception>
-        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, string? lockId = null) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
             var validator = sp.GetService<IValidateOptions<T>>();
@@ -162,7 +163,19 @@ namespace MongoOptions.Services
                 }
             }
 
-            var filter = Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name);
+            var locked = await GetLock<T>(name);
+
+            if (locked != null && locked.LockedBy != lockId)
+            {
+                throw new MongoOptionsConcurrencyException("We are locked this is for debug purposes we will handle this more gracefully later");
+            }
+
+            // we need a way to watch for non-watched versions this will break if not using Mongo Streams to update configs. Maybe.
+            value.__Mongo__Version++;
+
+            var filter = Builders<ConfigDocument<T>>.Filter.And(
+                Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name),
+                Builders<ConfigDocument<T>>.Filter.Eq(d => d.Value.__Mongo__Version, value.__Mongo__Version));
             var update = Builders<ConfigDocument<T>>.Update
                 .Set(d => d.Name, name)
                 .Set(d => d.Value, value);
@@ -174,7 +187,12 @@ namespace MongoOptions.Services
 
             var options = new UpdateOptions { IsUpsert = true };
 
-            await collection.UpdateOneAsync(filter, update, options);
+            var resultDoc = await collection.UpdateOneAsync(filter, update, options);
+
+            if (resultDoc.ModifiedCount == 0)
+            {
+                Console.WriteLine("New Document might have been made");
+            }
 
             string cacheKey = $"{configuration.CachePrefix}{typeof(T).Name}_{name}";
             cache.Remove(cacheKey);
@@ -461,7 +479,7 @@ namespace MongoOptions.Services
         /// Acquires a lock and returns a scope that automatically releases it when disposed.
         /// Recommended for most use cases (cleanest syntax).
         /// </summary>
-        public async Task<IAsyncDisposable> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
+        public async Task<IMongoLockScope> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
             string recordKey,
             TimeSpan? duration = null)
             where T : class, IConfigFile
