@@ -1,4 +1,5 @@
-using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using DnsClient.Protocol;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -7,10 +8,7 @@ using MongoDB.Driver.Linq;
 using MongoOptions.Data;
 using MongoOptions.Interfaces;
 using MongoOptions.Types;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
-using static System.Net.WebRequestMethods;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace MongoOptions.Services
 {
@@ -36,6 +34,22 @@ namespace MongoOptions.Services
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null) where T : class, IConfigFile;
+
+        Task<LockAcquisitionResult> LockRecordAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string? holderId = null, TimeSpan? duration = null) where T : class, IConfigFile;            // auto-generated if null
+
+        Task<bool> RenewLockAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string holderId, TimeSpan? extendBy = null) where T : class, IConfigFile;
+
+        Task ReleaseLockAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string holderId) where T : class, IConfigFile;
+
+        Task<IAsyncDisposable> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, TimeSpan? duration = null) where T : class, IConfigFile;
+
+        /// <summary>
+        /// This is for debug purposes only, and will be removed for preferred private access
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="recordKey"></param>
+        /// <returns></returns>
+        Task<LockMetadata?> GetLock<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey) where T : class, IConfigFile;
 
         /// <summary>
         /// Retrieves all configuration keys for the specified type.
@@ -184,7 +198,7 @@ namespace MongoOptions.Services
 
             var filter = Builders<ConfigDocument<T>>.Filter.Empty;
 
-            filter = BuildMetaDataFilter<ConfigDocument<T>>(requiredMetadata, filter);
+            filter = BuildMetaDataFilter(requiredMetadata, filter);
 
             var projection = Builders<ConfigDocument<T>>.Projection
                 .Include(x => x.Name);
@@ -308,7 +322,7 @@ namespace MongoOptions.Services
             }
         }
         
-        private FilterDefinition<T> BuildMetaDataFilter<T>(Dictionary<string, object>? requiredMetadata, FilterDefinition<T> filter) where T : class
+        private static FilterDefinition<T> BuildMetaDataFilter<T>(Dictionary<string, object>? requiredMetadata, FilterDefinition<T> filter) where T : class
         {
             if (requiredMetadata != null && requiredMetadata.Count > 0)
             {
@@ -322,6 +336,150 @@ namespace MongoOptions.Services
 
             return filter;
         }
-                
+
+        public async Task<LockAcquisitionResult> LockRecordAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string? holderId = null, TimeSpan? duration = null) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            var validator = sp.GetService<IValidateOptions<T>>();
+            var collection = connection.Collection ?? throw new Exception($"MongoCollection for {typeof(T).Name} is null");
+            holderId ??= GenerateHolderId();
+
+            var now = DateTime.UtcNow;
+            var expiresAt = now.Add(duration ?? TimeSpan.FromMinutes(10));
+
+            var filter = Builders<ConfigDocument<T>>.Filter.And(
+                Builders<ConfigDocument<T>>.Filter.Eq(x => x.Name, recordKey),
+                Builders<ConfigDocument<T>>.Filter.Or(
+                    Builders<ConfigDocument<T>>.Filter.Eq(x => x.LockMetadata.LockedBy, null),
+                    Builders<ConfigDocument<T>>.Filter.Lt(x => x.LockMetadata.LockExpiresAt, now)
+                )
+            );
+            var update = Builders<ConfigDocument<T>>.Update
+                .Set(x => x.LockMetadata.LockedBy, holderId)
+                .Set(x => x.LockMetadata.LockExpiresAt, expiresAt)
+                .Set(x => x.LockMetadata.LockAcquiredAt, now);
+
+            var options = new FindOneAndUpdateOptions<ConfigDocument<T>>
+            {
+                ReturnDocument = ReturnDocument.After,
+                IsUpsert = false
+            };
+
+            var result = await collection.FindOneAndUpdateAsync(filter, update, options);
+
+            if (result != null)
+            {
+                return new LockAcquisitionResult
+                {
+                    Success = true,
+                    HolderId = holderId,
+                    ExpiresAt = expiresAt
+                };
+            }
+
+            var current = await GetLock<T>(recordKey);
+            var msg = current?.LockedBy != null
+                ? $"Locked by '{current.LockedBy}' until {current.LockExpiresAt}"
+                : "Failed to acquire lock (record may not exist)";
+
+            return new LockAcquisitionResult
+            {
+                Success = false,
+                ErrorMessage = msg,
+                HolderId = current?.LockedBy ?? string.Empty,
+                ExpiresAt = current?.LockExpiresAt
+            };
+        }
+
+        public async Task<bool> RenewLockAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string holderId, TimeSpan? extendBy = null) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            var validator = sp.GetService<IValidateOptions<T>>();
+            var collection = connection.Collection ?? throw new Exception($"MongoCollection for {typeof(T).Name} is null");
+            var now = DateTime.UtcNow;
+            var expiresAt = now.Add(extendBy ?? TimeSpan.FromMinutes(10));
+
+            var filter = Builders<ConfigDocument<T>>.Filter.And(
+                Builders<ConfigDocument<T>>.Filter.Eq(x => x.Name, recordKey),
+                Builders<ConfigDocument<T>>.Filter.Eq(x => x.LockMetadata.LockedBy, holderId),
+                Builders<ConfigDocument<T>>.Filter.Gt(x => x.LockMetadata.LockExpiresAt, now)
+            );
+            var update = Builders<ConfigDocument<T>>.Update
+                .Set(x => x.LockMetadata.LockedBy, holderId)
+                .Set(x => x.LockMetadata.LockExpiresAt, expiresAt)
+                .Set(x => x.LockMetadata.LockAcquiredAt, now);
+
+            var options = new FindOneAndUpdateOptions<ConfigDocument<T>>
+            {
+                ReturnDocument = ReturnDocument.After,
+                IsUpsert = false
+            };
+
+            var result = await collection.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task ReleaseLockAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string holderId) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            var collection = connection.Collection ?? throw new Exception($"MongoCollection for {typeof(T).Name} is null");
+
+            var filter = Builders<ConfigDocument<T>>.Filter.And(
+                Builders<ConfigDocument<T>>.Filter.Eq(x => x.Name, recordKey),
+                Builders<ConfigDocument<T>>.Filter.Eq(x => x.LockMetadata.LockedBy, holderId)
+            );
+
+            var update = Builders<ConfigDocument<T>>.Update
+                .Set(x => x.LockMetadata.LockedBy, null)
+                .Set(x => x.LockMetadata.LockExpiresAt, null)
+                .Set(x => x.LockMetadata.LockAcquiredAt, null);
+
+            await collection.UpdateOneAsync(filter, update);
+        }
+
+        public async Task<LockMetadata?> GetLock<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey) where T : class, IConfigFile
+        {
+            var connection = sp.GetRequiredService<IMongoConnection<T>>();
+            var collection = connection.Collection;
+
+            var filter = Builders<ConfigDocument<T>>.Filter.Eq(x => x.Name, recordKey);
+
+            var projection = Builders<ConfigDocument<T>>.Projection
+                .Include(x => x.LockMetadata.LockedBy)
+                .Include(x => x.LockMetadata.LockExpiresAt)
+                .Include(x => x.LockMetadata.LockAcquiredAt);
+
+            var result = await collection
+                .Find(filter)
+                .Project<ConfigDocument<T>>(projection)
+                .FirstOrDefaultAsync();
+
+            return result?.LockMetadata;
+        }
+
+        /// <summary>
+        /// Acquires a lock and returns a scope that automatically releases it when disposed.
+        /// Recommended for most use cases (cleanest syntax).
+        /// </summary>
+        public async Task<IAsyncDisposable> LockScopedAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(
+            string recordKey,
+            TimeSpan? duration = null)
+            where T : class, IConfigFile
+        {
+            var result = await LockRecordAsync<T>(recordKey, holderId: null, duration);
+
+            if (!result.Success)
+            {
+                // General-purpose exception (not chat-specific)
+                throw new MongoLockAcquisitionException(
+                    $"Failed to acquire lock for record '{recordKey}' of type {typeof(T).Name}. " +
+                    $"Reason: {result.ErrorMessage}");
+            }
+
+            return new MongoRecordLockScope<T>(this, recordKey, result.HolderId);
+        }
+
+        private static string GenerateHolderId() =>
+            $"{Environment.MachineName}-{Environment.ProcessId}-{Guid.NewGuid():N}";
     }
 }

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using MongoOptions.Data;
 using MongoOptions.Interfaces;
-using MongoOptions.Services;
 using MongoOptions.Types;
 
 namespace MongoOptions
