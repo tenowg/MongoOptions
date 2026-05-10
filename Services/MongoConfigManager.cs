@@ -10,6 +10,7 @@ using MongoOptions.Exceptions;
 using MongoOptions.Interfaces;
 using MongoOptions.Types;
 using System.Diagnostics.CodeAnalysis;
+using System.Xml.Linq;
 
 namespace MongoOptions.Services
 {
@@ -34,7 +35,7 @@ namespace MongoOptions.Services
         /// <param name="name">The name of the configuration instance.</param>
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, string? lockId = null) where T : class, IConfigFile;
+        Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, IMongoLockScope? lockScope = null) where T : class, IConfigFile;
 
         Task<LockAcquisitionResult> LockRecordAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string recordKey, string? holderId = null, TimeSpan? duration = null) where T : class, IConfigFile;            // auto-generated if null
 
@@ -142,7 +143,8 @@ namespace MongoOptions.Services
         /// <param name="value">The configuration value to update.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
         /// <exception cref="OptionsValidationException">Thrown if the value fails validation.</exception>
-        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, string? lockId = null) where T : class, IConfigFile
+        /// <exception cref="MongoOptionsConcurrencyException"></exception>
+        public async Task UpdateConfigAsync<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] T>(string name, T value, Dictionary<string, object>? metadata = null, IMongoLockScope? lockScope = null) where T : class, IConfigFile
         {
             var connection = sp.GetRequiredService<IMongoConnection<T>>();
             var validator = sp.GetService<IValidateOptions<T>>();
@@ -165,36 +167,65 @@ namespace MongoOptions.Services
 
             var locked = await GetLock<T>(name);
 
-            if (locked != null && locked.LockedBy != lockId)
+            if (locked != null && locked.LockedBy != lockScope?.HolderId)
             {
                 throw new MongoOptionsConcurrencyException("We are locked this is for debug purposes we will handle this more gracefully later");
             }
 
-            // we need a way to watch for non-watched versions this will break if not using Mongo Streams to update configs. Maybe.
-            value.__Mongo__Version++;
+            FilterDefinition<ConfigDocument<T>> filter;
+            UpdateDefinition<ConfigDocument<T>> update;
+            UpdateOptions options;
+            int expectedVersion = 0;
 
-            var filter = Builders<ConfigDocument<T>>.Filter.And(
-                Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name),
-                Builders<ConfigDocument<T>>.Filter.Eq(d => d.Value.__Mongo__Version, value.__Mongo__Version));
-            var update = Builders<ConfigDocument<T>>.Update
-                .Set(d => d.Name, name)
-                .Set(d => d.Value, value);
+            // we need a way to watch for non-watched versions this will break if not using Mongo Streams to update configs. Maybe.
+            if (value.IsVersioned())
+            {
+                expectedVersion = value.GetVersion();
+                value.SetVersion(expectedVersion + 1);
+
+                filter = Builders<ConfigDocument<T>>.Filter.And(
+                    Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name),
+                    Builders<ConfigDocument<T>>.Filter.Eq($"Value.{value.GetVersionPropertyName()}", expectedVersion));
+                update = Builders<ConfigDocument<T>>.Update
+                    .Set(d => d.Name, name)
+                    .Set(d => d.Value, value);
+
+                options = new UpdateOptions { IsUpsert = expectedVersion == 0 };
+            } 
+            else
+            {
+                filter = Builders<ConfigDocument<T>>.Filter.Eq(d => d.Name, name);
+                update = Builders<ConfigDocument<T>>.Update
+                    .Set(d => d.Name, name)
+                    .Set(d => d.Value, value);
+                
+                options = new UpdateOptions { IsUpsert = true };
+            }
 
             if (metadata != null)
             {
                 update = update.Set(d => d.Metadata, metadata);
             }
 
-            var options = new UpdateOptions { IsUpsert = true };
-
-            var resultDoc = await collection.UpdateOneAsync(filter, update, options);
-
-            if (resultDoc.ModifiedCount == 0)
+            try
             {
-                Console.WriteLine("New Document might have been made");
+                var resultDoc = await collection.UpdateOneAsync(filter, update, options);
+
+                if (value.IsVersioned() && expectedVersion > 0 && resultDoc.MatchedCount == 0)
+                {
+                    throw new MongoOptionsConcurrencyException(
+                        $"Configuration '{name}' was modified by another user. Expected version: {expectedVersion}.");
+                }
+            }
+            catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                // This catches the exact scenario where TWO people tried to save a brand new 
+                // config (expectedVersion == 0) at the exact same time, and one triggered the Upsert first.
+                throw new MongoOptionsConcurrencyException(
+                    $"Configuration '{name}' was just created by another user. Please reload.");
             }
 
-            string cacheKey = $"{configuration.CachePrefix}{typeof(T).Name}_{name}";
+        string cacheKey = $"{configuration.CachePrefix}{typeof(T).Name}_{name}";
             cache.Remove(cacheKey);
             IOptionsMonitorCache<T> optionsCache = sp.GetRequiredService<IOptionsMonitorCache<T>>();
             if (name  == MongoDefaultOptions.DefaultName)

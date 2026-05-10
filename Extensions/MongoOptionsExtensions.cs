@@ -43,7 +43,7 @@ namespace MongoOptions.Extensions
 
                 services.AddMemoryCache();
                 services.AddSingleton<IMongoClient>(new MongoClient(options.ConnectionString));
-                services.AddScoped<IConfigManager, MongoConfigManager>();
+                services.AddSingleton<IConfigManager, MongoConfigManager>();
                 services.AddSingleton<MongoConfigRegistry>();
                 services.AddSingleton<InternalCacheService>();
 
@@ -54,8 +54,6 @@ namespace MongoOptions.Extensions
 
             public T? FindOrAddRegisteredService<T>(ServiceLifetime lifetime = ServiceLifetime.Singleton) where T : class, new()
             {
-                //var registryDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
-
                 T? service = services.FindRegisteredService<T>();
 
                 if (service == null)

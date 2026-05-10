@@ -29,7 +29,7 @@ dotnet add package Tenowg.MongoOptions
 Use standard Data Annotations for validation and our custom attribute for DB naming.
 
 ```csharp
-[MongoOption(DatabaseName = "AppSettings", CollectionName = "FeatureToggle")]
+[MongoOption(DatabaseName = "AppSettings", CollectionName = "FeatureToggle", IsVersioned = true)]
 public partial class FeatureSettings
 {
     [Required]
@@ -46,7 +46,7 @@ public partial FeatureSettingsValidator : IValidateOption<FeatureSettings>
 {}
 ```
 
-MongoOption Attribute is required for Source Generation, you don't need to assign a custom Database name or CollectionName.
+MongoOption Attribute is required for Source Generation, you don't need to assign a custom Database name or CollectionName. IsVersioned is if you want to protect your config or data file with OCC protection, it is Optional like everything else.
 
 Source Generation has been added [MongoOptions.Generator](https://github.com/tenowg/MongoOptions.Generator). It is keyed to the attribute [MongoOptions]
 So if you want to make your life even easier, just tag you POCOs with [MongoOption] and add .RegisterProjectNameDiscoveredOptions()

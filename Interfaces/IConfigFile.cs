@@ -4,7 +4,10 @@ namespace MongoOptions.Interfaces
 {
     public interface IConfigFile
     {
-        int __Mongo__Version { get; set; }
+        bool IsVersioned();
+        void SetVersion(int version);
+        int GetVersion();
+        string GetVersionPropertyName();
         IEnumerable<PropertyMetadata> GetProperties();
         Type GetConfigType();
         Type GetMonitorType();

@@ -1,0 +1,12 @@
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>Mongo Model</Name>
+    <Description>Creates a MongoOption class with required JsonContext and Validator</Description>
+    <ProjectType>CSharp</ProjectType>
+    <DefaultName>MongoModel.cs</DefaultName>
+    <Icon>icon.png</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectItem ReplaceParameters="true">MongoModel.cs</ProjectItem>
+  </TemplateContent>
+</VSTemplate>

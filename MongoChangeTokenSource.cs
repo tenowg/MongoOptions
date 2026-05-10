@@ -8,7 +8,7 @@ namespace MongoOptions
     {
         // Tracks a separate signal for every name (e.g., "Default", "TenantA", "TenantB")
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _signals = new();
-        private CancellationTokenSource _tokenSource;
+        //private CancellationTokenSource _tokenSource;
         // Returning null or an empty string here tells the system 
         // this source can handle various names.
         public string? Name => null;

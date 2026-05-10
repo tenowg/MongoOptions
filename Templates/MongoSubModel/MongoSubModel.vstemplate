@@ -1,0 +1,12 @@
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>Mongo SubClass Model</Name>
+    <Description>Creates a SubClass class with required JsonContext and Validator</Description>
+    <ProjectType>CSharp</ProjectType>
+    <DefaultName>MongoSubModel</DefaultName>
+    <Icon>icon.png</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectItem ReplaceParameters="true">MongoSubModel.cs</ProjectItem>
+  </TemplateContent>
+</VSTemplate>

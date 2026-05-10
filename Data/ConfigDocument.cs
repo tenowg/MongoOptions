@@ -19,12 +19,12 @@ namespace MongoOptions.Data
         /// <summary>
         /// The name of the configuration instance.
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         /// <summary>
         /// The configuration value.
         /// </summary>
-        public T Value { get; set; }
+        public T Value { get; set; } = default!;
 
         public Dictionary<string, object> Metadata = [];
 

@@ -102,7 +102,7 @@ namespace MongoOptions.Extensions
                     var name = type.Name;
                     // Remove the `1 or `2 suffix
                     var index = name.IndexOf('`');
-                    if (index > 0) name = name.Substring(0, index);
+                    if (index > 0) name = name[..index];
 
                     var genericArgs = type.GetGenericArguments()
                                           .Select(GetUITypeName);

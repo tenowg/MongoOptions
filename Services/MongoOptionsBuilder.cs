@@ -18,7 +18,7 @@ namespace MongoOptions.Services
         /// Gets the underlying service collection for direct manipulation if needed.
         /// </summary>
         public IServiceCollection Services => services;
-        private MongoConfigurationOptions? options = services.FindOrAddRegisteredService<MongoConfigurationOptions>();
+        private readonly MongoConfigurationOptions? options = services.FindOrAddRegisteredService<MongoConfigurationOptions>();
 
         /// <summary>
         /// Registers the specified options type for MongoDB-based configuration.
@@ -39,10 +39,16 @@ namespace MongoOptions.Services
 
             services.AddOptions<T>();
 
-            //var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
+            return this;
+        }
 
-            //registry?.Register<T>(new T());
-
+        /// <summary>
+        /// Add indexes to the database for performance, also handles clearing the cache so MongoWatch works correctly if using.
+        /// </summary>
+        /// <returns></returns>
+        public MongoOptionsBuilder WithConfigIndices()
+        {
+            services.AddHostedService<MongoOptionsStartupService>();
             return this;
         }
 
@@ -53,14 +59,6 @@ namespace MongoOptions.Services
         /// <returns>The MongoOptionsBuilder for chaining.</returns>
         public MongoOptionsBuilder AddMongoWatch()
         {
-            //var registry = services.FindOrAddRegisteredService<MongoConfigRegistry>();
-            //var databaseName = registry?.GetConfigs().Select(o => o.GetDatabaseName(options!)).Distinct().ToList() ?? [];
-
-            //foreach(var group in databaseName)
-            //{
-            //services.AddKeyedSingleton(group, (sp, key) => new MongoOptionsWatcher(sp, group));
-            //services.AddHostedService(sp => sp.GetRequiredKeyedService<MongoOptionsWatcher>(group));
-            //}
             services.AddHostedService<MongoOptionsWatcher>();
             return this;
         }

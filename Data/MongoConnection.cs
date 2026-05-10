@@ -25,7 +25,7 @@ namespace MongoOptions.Data
         public IConfigFile Instance { get; set; }
         public InternalCacheService Cache { get; set; }
 
-        private IServiceProvider sp { get; set; }
+        private IServiceProvider Sp { get; set; }
 
         public MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, InternalCacheService cache, MongoConfigurationOptions options)
         {
@@ -33,7 +33,7 @@ namespace MongoOptions.Data
             OptionsChange = optionsChange;
             MongoConfigs = options;
             Instance = new T();
-            this.sp = sp;
+            this.Sp = sp;
             Cache = cache;
 
             var optionsAttr = typeof(T).GetCustomAttribute<MongoOptionAttribute>();
@@ -50,7 +50,7 @@ namespace MongoOptions.Data
 
         public IOptionsMonitor<T> GetMonitor()
         {
-            return sp.GetService<IOptionsMonitor<T>>();
+            return Sp.GetService<IOptionsMonitor<T>>()!;
         }
 
         public void OnStarted(string? name = null)
@@ -90,36 +90,28 @@ namespace MongoOptions.Data
 
         public async Task EnsureIndices()
         {
-            await Collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<ConfigDocument<T>>(
-                    Builders<ConfigDocument<T>>.IndexKeys.Ascending(x => x.LockMetadata.LockExpiresAt),
-                    new CreateIndexOptions
-                    {
-                        Name = "LockExpiresAt_Index",
-                        Unique = false
-                    }
-                ));
-
-            await Collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<ConfigDocument<T>>(
+            if (Collection == null) return;
+            var indexModels = new List<CreateIndexModel<ConfigDocument<T>>>
+            {
+                new(
                     Builders<ConfigDocument<T>>.IndexKeys.Ascending(x => x.Name),
-                    new CreateIndexOptions
-                    {
-                        Name = "Name_1",
-                        Unique = true   // set to true if Name should be unique per collection
-                    }
-                ));
-            await Collection.Indexes.CreateOneAsync(
-                new CreateIndexModel<ConfigDocument<T>>(
+                    new CreateIndexOptions { Name = "Name_1", Unique = true }
+                ),
+        
+                new(
+                    Builders<ConfigDocument<T>>.IndexKeys.Ascending(x => x.LockMetadata.LockExpiresAt),
+                    new CreateIndexOptions { Name = "LockExpiresAt_Index", Unique = false }
+                ),
+
+                new(
                     Builders<ConfigDocument<T>>.IndexKeys
                         .Ascending(x => x.Name)
                         .Ascending(x => x.LockMetadata.LockedBy),
-                    new CreateIndexOptions
-                    {
-                        Name = "Name_LockedBy_Index",
-                        Unique = false
-                    }
-                ));
+                    new CreateIndexOptions { Name = "Name_LockedBy_Index", Unique = false }
+                )
+            };
+
+            await Collection.Indexes.CreateManyAsync(indexModels);
         }
     }
 }

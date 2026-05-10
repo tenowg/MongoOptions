@@ -39,6 +39,7 @@ namespace MongoOptions.Data
                 Console.WriteLine($"Warning: Failed to release lock for {_recordKey}: {ex.Message}");
                 // Or use Debug.WriteLine / proper logger
             }
+            GC.SuppressFinalize(this);
         }
     }
 }

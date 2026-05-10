@@ -17,5 +17,7 @@ namespace MongoOptions.Attributes
         /// If null, the default database from MongoConfigurationOptions is used.
         /// </summary>
         public string? DatabaseName { get; set; }
+
+        public string? VersionPropertyName { get; set; }
     }
 }

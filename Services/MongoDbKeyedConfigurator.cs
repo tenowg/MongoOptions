@@ -59,7 +59,7 @@ namespace MongoOptions.Services
                         cache.Add(lookupName, cachedSettings, mongoConnection.memoryOptions.RegisterPostEvictionCallback(CacheEvictionCallback, state: this));                   
                     }
                 }
-                catch
+                catch (Exception)
                 {
                     if (cachedSettings != null)
                     {
