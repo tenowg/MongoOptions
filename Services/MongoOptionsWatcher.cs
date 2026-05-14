@@ -1,15 +1,12 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
-using MongoOptions.Data;
 using MongoOptions.Interfaces;
-using System.Xml.Linq;
 
 namespace MongoOptions.Services
 {
-    public class MongoOptionsWatcher(IServiceProvider sp, IEnumerable<IMongoConnection> connections) : BackgroundService
+    public class MongoOptionsWatcher(IServiceProvider sp, IEnumerable<IMongoConnection> connections, ILogger<MongoOptionsWatcher> logger) : BackgroundService
     {
         private record Database(string database, string collection);
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -51,6 +48,7 @@ namespace MongoOptions.Services
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Mongo Watch failed");
             }
 
         }

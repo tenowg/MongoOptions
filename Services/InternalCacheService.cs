@@ -1,10 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using MongoOptions.Data;
-using MongoOptions.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml.Linq;
 
 namespace MongoOptions.Services
 {
@@ -15,7 +10,7 @@ namespace MongoOptions.Services
             cache.Remove(BuildKey<T>(key));
         }
 
-        public void Clear() { }
+        public static void Clear() { }
 
         public ConfigDocument<T> Add<T>(string key, ConfigDocument<T> value, MemoryCacheEntryOptions options) 
         {
