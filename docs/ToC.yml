@@ -1,8 +1,8 @@
 - name: Home
-  href: overview.md
+  href: overview.html
 
 - name: Getting Started
-  href: getting-started.md
+  href: getting-started.html
 
 - name: API
   href: api/
