@@ -1,3 +1,5 @@
+[!INCLUDE [my-markdown-block](../README.md)]
+
 # MongoOptions
 
 > A modern, high-performance C# library for [brief description of what it does].
