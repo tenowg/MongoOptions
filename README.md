@@ -76,6 +76,7 @@ builder.Services.AddMongoConfiguration(config =>
 OR
 .RegisterProjectNameDiscoveredOptions()
 .RegisterOtherProjectDiscoveredOptions()
+.WithConfigIndices()
 .AddMongoWatch();
 ```
 
@@ -87,15 +88,7 @@ This will be extendable, so look for Redis versions in the near future.
 
 If you plan on using IOptionsMontor there is one more thing you need to add to your app.
 
-BuildIndexes(): To improve the speed of Mongo Operations, you should use the BuildIndexes after you build. This will handle both Locks and options lookup.
-
-```csharp
-await app.BuildIndexes();
-app.RunMongoMonitor();
-```
-
-It doesn't matter were you put it, but it needs to be there to clear the initial cache or monitor will not work.
-You don't need this if you are only going to use IOptionsSnapshot.
+`.WithConfigIndices()`: To improve the speed of Mongo Operations. This will handle both Locks and options lookup. By creating Indexes on every Config Type in the database. This is highly recommended if you are using IOptionsMonitor, as it will be doing lookups on every request.
 
 ### 3. Usage
 
