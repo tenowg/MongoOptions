@@ -46,6 +46,7 @@
       "modern"
     ],
     "globalMetadata": {
+      "_disableNavbar": false,
       "_appName": "Tenowg.MongoOptions",
       "_appTitle": "MongoOptions Documentation",
       "_enableSearch": true,
