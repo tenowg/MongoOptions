@@ -4,10 +4,6 @@
 - name: Getting Started
   href: getting-started.md
 
-- name: Concepts
-  href: concepts/
-  homepage: concepts/index.md
-
 - name: API Reference
   href: api/
-  homepage: api/index.md
+  homepage: api/MongoOptions.html

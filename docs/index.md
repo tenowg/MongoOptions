@@ -1,11 +1,11 @@
-# YourLibrary
+# MongoOptions
 
 > A modern, high-performance C# library for [brief description of what it does].
 
-**YourLibrary** makes it easy to [solve a common problem] with a clean and intuitive API.
+**MongoOptions** makes it easy to [solve a common problem] with a clean and intuitive API.
 
-[![NuGet](https://img.shields.io/nuget/v/YourLibrary.svg)](https://www.nuget.org/packages/YourLibrary)
-[![License](https://img.shields.io/github/license/yourusername/your-repo)](https://github.com/yourusername/your-repo/blob/main/LICENSE)
+[![NuGet](https://img.shields.io/nuget/v/Tenowg.MongoOptions.svg)](https://www.nuget.org/packages/Tenowg.MongoOptions)
+[![License](https://img.shields.io/github/license/tenowg/MongoOptions.svg)](https://github.com/tenowg/MongoOptions/blob/master/LICENSE)
 
 ---
 
