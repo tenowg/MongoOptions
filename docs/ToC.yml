@@ -1,9 +1,9 @@
 - name: Home
-  href: index.md
+  href: overview.md
 
 - name: Getting Started
   href: getting-started.md
 
-- name: API Reference
+- name: API
   href: api/
   homepage: api/MongoOptions.html
