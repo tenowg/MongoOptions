@@ -1,6 +1,7 @@
 ﻿using MongoOptions.Attributes;
 using MongoOptions.Data;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MongoOptions.Extensions
 {
@@ -52,6 +53,15 @@ namespace MongoOptions.Extensions
             public Type GetUnderlyingType()
                 => Nullable.GetUnderlyingType(type) ?? type;
 
+            //public bool CanAssignToGeneric(Type openGeneric)
+            //{
+            //    if (type is null || openGeneric is null) return false;
+            //    if (!type.IsGenericType) return false;
+
+            //    var t = type.GetGenericTypeDefinition();
+
+            //    return type.GetGenericTypeDefinition().FullName == openGeneric.FullName;
+            //}
             /// <summary>
             /// Gets the properties of the type that are eligible for configuration (readable and writable).
             /// </summary>
