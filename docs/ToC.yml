@@ -1,14 +1,6 @@
 - name: Home
-  href: overview.html
-
+  href: articles/
 - name: Getting Started
-  href: getting-started.html
-
+  href: articles/getting-started.md
 - name: API
   href: api/
-  homepage: api/MongoOptions.html
-- items:
-  - name: Overview
-    href: overview.md
-  - name: Getting Started
-    href: getting-started.md

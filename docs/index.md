@@ -1,1 +1,3 @@
-[!INCLUDE [my-markdown-block](overview.md)]
+---
+redirect_url: articles/overview.html
+---

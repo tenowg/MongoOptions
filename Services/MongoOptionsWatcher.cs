@@ -6,7 +6,7 @@ using MongoOptions.Interfaces;
 
 namespace MongoOptions.Services
 {
-    public class MongoOptionsWatcher(IServiceProvider sp, IEnumerable<IMongoConnection> connections, ILogger<MongoOptionsWatcher> logger) : BackgroundService
+    internal class MongoOptionsWatcher(IServiceProvider sp, IEnumerable<IMongoConnection> connections, ILogger<MongoOptionsWatcher> logger) : BackgroundService
     {
         private record Database(string database, string collection);
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)

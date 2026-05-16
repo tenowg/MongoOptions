@@ -19,7 +19,7 @@ namespace MongoOptions.Services
     /// <param name="cache">The memory cache for storing loaded configurations.</param>
     /// <param name="collection">The MongoDB client.</param>
     /// <param name="options">The MongoDB configuration options.</param>
-    public class MongoDbKeyedConfigurator<T>(IMongoConnection<T> mongoConnection, InternalCacheService cache) : IConfigureNamedOptions<T> where T : class, IConfigFile
+    internal class MongoDbKeyedConfigurator<T>(IMongoConnection<T> mongoConnection, InternalCacheService cache) : IConfigureNamedOptions<T> where T : class, IConfigFile
     {
         private readonly IMongoCollection<ConfigDocument<T>> _collection = mongoConnection.Collection!;
         private readonly MongoConfigurationOptions _configuration = mongoConnection.MongoConfigs;

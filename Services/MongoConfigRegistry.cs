@@ -7,11 +7,9 @@ namespace MongoOptions.Services
     /// Registry for tracking registered configuration types.
     /// Provides methods to register and retrieve configuration types used in the MongoDB options system.
     /// </summary>
-    public class MongoConfigRegistry(IEnumerable<IMongoConnection> connections)
+    public sealed class MongoConfigRegistry(IEnumerable<IMongoConnection> connections)
     {
         // Key: The name/ID of the config, Value: The Type and a friendly name
-        //private readonly HashSet<Type> _registeredConfigs = new();
-        //private readonly ConcurrentDictionary<string, IConfigFile> _configs = new();
         private readonly Dictionary<string, IMongoConnection> _connections = connections.ToDictionary(o => o.Type.Name, o => o);
 
         /// <summary>

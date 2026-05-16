@@ -21,10 +21,7 @@ namespace MongoOptions.Extensions
         {
             public string GetDisplayName() =>
                 prop.GetCustomAttribute<DisplayAttribute>()?.Name ?? prop.Name;
-        }
 
-        extension(PropertyInfo prop)
-        {
             public string GetDescription() =>
                 prop.GetCustomAttribute<DisplayAttribute>()?.Description ?? "";
         }

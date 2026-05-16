@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 
 namespace MongoOptions
 {
-    public class MongoChangeTokenSource<TOptions> : IOptionsChangeTokenSource<TOptions>
+    internal class MongoChangeTokenSource<TOptions> : IOptionsChangeTokenSource<TOptions>
     {
         // Tracks a separate signal for every name (e.g., "Default", "TenantA", "TenantB")
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _signals = new();

@@ -4,7 +4,7 @@ using MongoOptions.Interfaces;
 
 namespace MongoOptions.Services
 {
-    public class MongoOptionsStartupService(IServiceProvider serviceProvider) : IHostedService
+    internal class MongoOptionsStartupService(IServiceProvider serviceProvider) : IHostedService
     {
         public async Task StartAsync(CancellationToken cancellationToken)
         {

@@ -4,6 +4,7 @@ using System.Text;
 
 namespace MongoOptions.Types
 {
+    /// <exclude />
     public enum PropertyIntent
     {
         Text,
@@ -11,6 +12,7 @@ namespace MongoOptions.Types
         Numeric
     }
 
+    /// <exclude />
     public record PropertyHint(
         PropertyIntent Intent,
         bool IsRequired,

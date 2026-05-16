@@ -45,4 +45,4 @@ MongoOptions overrides the standard `IOptions<T>`, `IOptionsSnapshot<T>`, and `I
 ## Next Steps
 
 - [Getting Started](getting-started.md) – Install the package and configure your first options class
-- Explore the [API Reference](api/) – Detailed documentation for all public types and methods
+- Explore the [API Reference](/api/MongoOptions) – Detailed documentation for all public types and methods

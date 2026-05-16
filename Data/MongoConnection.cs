@@ -12,7 +12,7 @@ using System.Reflection;
 
 namespace MongoOptions.Data
 {
-    public partial class MongoConnection<T> : IMongoConnection, IMongoConnection<T> where T : class, IConfigFile, new()
+    internal partial class MongoConnection<T> : IMongoConnection, IMongoConnection<T> where T : class, IConfigFile, new()
     {
         public string Database { get; set; }
         public string CollectionName { get; set; }
@@ -23,11 +23,11 @@ namespace MongoOptions.Data
         public MongoConfigurationOptions MongoConfigs { get; set; }
         public Type Type { get; set; } = typeof(T);
         public IConfigFile Instance { get; set; }
-        public InternalCacheService Cache { get; set; }
+        internal InternalCacheService Cache { get; set; }
 
         private IServiceProvider Sp { get; set; }
 
-        public MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, InternalCacheService cache, MongoConfigurationOptions options)
+        internal MongoConnection(IServiceProvider sp, IMongoClient client, IOptionsMonitorCache<T> optionsCache, IOptionsChangeTokenSource<T> optionsChange, InternalCacheService cache, MongoConfigurationOptions options)
         {
             OptionsCache = optionsCache;
             OptionsChange = optionsChange;

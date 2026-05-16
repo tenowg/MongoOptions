@@ -34,3 +34,7 @@ appsettings.Local.json
 # --- Tooling ---
 .ionide/
 .cache/
+
+# --- Docs ---
+docs/_site/
+docs/api/

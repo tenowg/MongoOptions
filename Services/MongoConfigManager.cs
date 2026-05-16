@@ -8,7 +8,6 @@ using MongoOptions.Exceptions;
 using MongoOptions.Interfaces;
 using MongoOptions.Types;
 using System.Diagnostics.CodeAnalysis;
-using static System.Net.WebRequestMethods;
 
 namespace MongoOptions.Services
 {
@@ -17,7 +16,7 @@ namespace MongoOptions.Services
     /// Implementation of IConfigManager for managing configuration options in MongoDB.
     /// Handles validation, caching, and database operations.
     /// </summary>
-    public class MongoConfigManager(IServiceProvider sp, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
+    public sealed class MongoConfigManager(IServiceProvider sp, IMemoryCache cache, MongoConfigurationOptions configuration) : IConfigManager
     {
         /// <summary>
         /// Updates the default configuration for the specified type.
@@ -179,7 +178,7 @@ namespace MongoOptions.Services
         /// Asynchronously retrieves the names of configuration documents that match the specified filter.
         /// </summary>
         /// <typeparam name="T">The type of configuration file. Must implement the IConfigFile interface.</typeparam>
-        /// <param name="filterBuilder">A function that receives a FilterDefinitionBuilder for ConfigDocument<T> and returns a filter definition
+        /// <param name="filterBuilder">A function that receives a FilterDefinitionBuilder for ConfigDocument and returns a filter definition
         /// specifying which documents to match.</param>
         /// <returns>A task representing the asynchronous operation. The task result contains a list of strings with the names of
         /// the matching configuration documents. The list is empty if no documents match the filter.</returns>

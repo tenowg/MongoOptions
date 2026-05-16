@@ -3,7 +3,7 @@ using MongoOptions.Data;
 
 namespace MongoOptions.Services
 {
-    public class InternalCacheService(IMemoryCache cache, MongoConfigurationOptions options)
+    internal class InternalCacheService(IMemoryCache cache, MongoConfigurationOptions options)
     {
         public void Remove<T>(string key)
         {
