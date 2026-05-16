@@ -7,7 +7,13 @@ title: Getting Started
 
 This guide walks you through setting up MongoOptions in your .NET application.
 
-## 1. Define Your Settings POCO
+## 1. Installation
+
+```
+dotnet add package Tenowg.MongoOptions
+```
+
+## 2. Define Your Settings POCO
 
 Use standard Data Annotations for validation and the `[MongoOption]` attribute to configure database naming.
 
@@ -48,7 +54,7 @@ public partial class FeatureList
 
 `[MongoLazy]` enables efficient append operations on collections without loading the full data object into memory.
 
-## 2. Register in Program.cs
+## 3. Register in Program.cs
 
 Use the fluent API to configure MongoOptions:
 
@@ -68,7 +74,7 @@ builder.Services.AddMongoConfiguration(config =>
 - `WithConfigIndices()`: Creates database indexes on all configuration types to improve lookup performance. Highly recommended when using `IOptionsMonitor`.
 - `AddMongoWatch()`: Enables real-time updates via MongoDB Change Streams. Requires a replica set. Useful for multi-server synchronization.
 
-## 3. Usage
+## 4. Usage
 
 Inject `IOptionsSnapshot<T>` for per-request updates or `IOptionsMonitor<T>` for real-time change notifications.
 

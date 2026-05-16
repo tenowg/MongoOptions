@@ -1,4 +1,7 @@
 
+[![NuGet](https://img.shields.io/nuget/v/Tenowg.MongoOptions.svg)](https://www.nuget.org/packages/YourLibrary)
+[![License](https://img.shields.io/github/license/tenowg/MongoOptions)](https://github.com/tenowg/MongoObject/blob/main/LICENSE)
+
 Please visit my [MongoOptions.Blazor](https://github.com/tenowg/MongoOptions.Blazor) Github, it will be a usuable project to add Razor components to manage your Config files
 
 # MongoOptions.Core 🍃
