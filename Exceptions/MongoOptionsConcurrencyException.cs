@@ -1,7 +1,7 @@
 ﻿namespace MongoOptions.Exceptions
 {
     [Serializable]
-    internal class MongoOptionsConcurrencyException : Exception
+    public class MongoOptionsConcurrencyException : Exception
     {
         public MongoOptionsConcurrencyException()
         {

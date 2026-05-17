@@ -30,6 +30,12 @@ public partial class FeatureSettings
     public int MaxRetries { get; set; } = 5;
 }
 
+// Always required, this enables fast .Clone() operations
+[JsonSerializable(typeof(FeatureSettings))]
+public partial class FeatureSettingsJsonContext : JsonSerializerContext
+{
+}
+
 // Required when using DataAnnotations for validation
 [OptionsValidator]
 public partial class FeatureSettingsValidator : IValidateOption<FeatureSettings>
@@ -40,6 +46,8 @@ public partial class FeatureSettingsValidator : IValidateOption<FeatureSettings>
 The `[MongoOption]` attribute is required for source generation. You do not need to assign custom `DatabaseName` or `CollectionName` values. The `VersionPropertyName` property enables optimistic concurrency control (OCC) protection and is optional.
 
 Source generation is provided by the [MongoOptions.Generator](https://github.com/tenowg/MongoOptions.Generator) package. Tagging your POCOs with `[MongoOption]` and calling `.RegisterProjectNameDiscoveredOptions()` in your DI configuration will automatically register all discovered configurations.
+
+The JsonContext is required for all MongoObjects, CodeGeneration will complete the class, you are not required to add anything else, you have to be carefull of the naming, it is required that the name be `ClassName`JsonContext.
 
 For collection support, use the `[MongoLazy]` attribute:
 

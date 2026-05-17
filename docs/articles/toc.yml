@@ -2,3 +2,9 @@
     href: overview.md
   - name: Getting Started
     href: getting-started.md
+  - href: metadata.md
+  - name: Object Locking
+    href: object-locking.md
+    items:
+      - href: optimistic-concurrency-control.md
+      - href: distributed-locking.md

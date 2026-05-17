@@ -1,7 +1,7 @@
 ﻿namespace MongoOptions.Exceptions
 {
     [Serializable]
-    internal class MongoLockAcquisitionException : Exception
+    public class MongoLockAcquisitionException : Exception
     {
         public MongoLockAcquisitionException()
         {
